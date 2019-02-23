@@ -11,12 +11,13 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r}
 library(tidyverse)
+library(gridExtra)
 ```
 
 # Parameters
 ```{r}
-n <- 100 # Number of Nodes in Plot
-number_neighbors <- floor(n/1) # Number of the first kth neighbors, the rest edges will get eliminated
+n <- 50 # Number of Nodes in Plot
+number_neighbors <- floor(n/3) # Number of the first kth neighbors, the rest edges will get eliminated
 ```
 
 # Functions
@@ -60,16 +61,28 @@ desigualdad_triangulo <- function(ciudades_dist)
     return(ciudades_dist)
   }
 
-TSP_plot <- function(ciudades_pos_df, camino_heuritica, n){
-  g1 <- ggplot(ciudades_pos_df, aes(x = V1, y = V2)) + geom_point() + theme_bw() + geom_text(aes(label=c(1:n)), hjust=0, vjust=0)
-  for(i in 1:n){
-    i1 <- ciudades_pos_df[camino_heuritica[i],1]
-    i2 <- ciudades_pos_df[camino_heuritica[i],2]
-    j1 <- ciudades_pos_df[camino_heuritica[i+1],1]
-    j2 <- ciudades_pos_df[camino_heuritica[i+1],2]
-    g1 <- g1 + geom_segment(x = i1 , xend = j1, y = i2, yend = j2)
+TSP_plot <- function(ciudades_pos_df, camino_heuristica, camino_heuristica_original){
+  n <- nrow(ciudades_pos_df)
+  g <- ggplot(ciudades_pos_df, aes(x = V1, y = V2)) + geom_point() + theme_bw() + geom_text(aes(label=c(1:n)), hjust=0, vjust=0)
+  if(all(!camino_heuristica==0)){
+    m <- n
   }
-  return(g1)
+  else{
+   m <- min(which(camino_heuristica==0))-2 
+  }
+  for(i in 1:m){
+     i1 <- ciudades_pos_df[camino_heuristica[i],1]
+     i2 <- ciudades_pos_df[camino_heuristica[i],2]
+     j1 <- ciudades_pos_df[camino_heuristica[i+1],1]
+     j2 <- ciudades_pos_df[camino_heuristica[i+1],2]
+     if(camino_heuristica[i] == camino_heuristica_original[i]){
+        g <- g + geom_segment(x = i1 , xend = j1, y = i2, yend = j2, color="black")
+     }
+     else{
+       g <- g + geom_segment(x = i1 , xend = j1, y = i2, yend = j2, color="red") 
+     }
+  }
+  return(g)
 }
 ```
 
@@ -92,19 +105,12 @@ ciudades_dist <- desigualdad_triangulo(ciudades_dist)
 # Eliminate all but the first kth nearest edges for each node.
 vecinos_lista <- list()
 for(i in 1:n){
-  vecinos_lista[[i]] <- c(0)
   kth_near <- (ciudades_dist_sin_mod[i,] %>% sort())[number_neighbors]
   for(j in 1:n){
       if(ciudades_dist_sin_mod[i,j] > kth_near){
         ciudades_dist[i,j] <- Inf
       }
-      else{
-        if(i!=j){
-          vecinos_lista[[i]] <- c(vecinos_lista[[i]],j)
-        }
-      }
    }
-   vecinos_lista[[i]] <- tail(vecinos_lista[[i]],-1)
 }
 
 # Hace simétrica la matriz
@@ -119,6 +125,10 @@ for(i in 1:n){
         }
       }
    }
+}
+
+for(i in 1:n){
+  vecinos_lista[[i]] <- which(as.logical((ciudades_dist[i,] < Inf)*(ciudades_dist[i,] > 0) %>% as.integer()))
 }
 
 # Estricturas a usar
@@ -137,44 +147,159 @@ for(i in 1:n){
 
 #Iteraciones
 ```{r}
-for(num_iter in 1:(n-1)){
+m <- n-1
+for(num_iter in 1:m){
   for(i in 1:n){
-     camino_min <- Inf
      ciudad_actual <- caminos[i, num_iter]
      ciudades_vecinas_por_recorrer <- setdiff(vecinos_lista[[ciudad_actual]], caminos[i, 1:num_iter])
      grado_vecinos_por_recorrer <- grado_vecinos_lista[[i]][ciudades_vecinas_por_recorrer]
-     boolean_neighbors <- grado_vecinos_por_recorrer > 1
+     boolean_neighbors <- grado_vecinos_por_recorrer > 2
      if(all(boolean_neighbors)){
+       dist_min <- Inf
        for(j in ciudades_vecinas_por_recorrer){
-           ciudad_cand <- ciudades_dist[ciudad_actual, j]
-           if(ciudad_cand < camino_min){
-             camino_min <- ciudad_cand
+           dist_ciudad <- ciudades_dist_sin_mod[ciudad_actual, j]
+           if(dist_ciudad < dist_min){
+             dist_min <- dist_ciudad
              ciudad_min <- j
            }
        }
      }
      else{
        ciudad_min <- (ciudades_vecinas_por_recorrer[!boolean_neighbors])[1]
-       camino_min <- ciudades_dist[ciudad_actual, ciudad_min]
+       dist_min <- ciudades_dist_sin_mod[ciudad_actual, ciudad_min]
      }
      for(j in ciudades_vecinas_por_recorrer){
        grado_vecinos_lista[[i]][j] <- grado_vecinos_lista[[i]][j] - 1
      }
      grado_vecinos_lista[[i]][ciudad_actual] <- 0
-     costos[i, num_iter] <- camino_min
+     costos[i, num_iter] <- dist_min
      caminos[i, num_iter+1] <- ciudad_min
   }
 }
-costos[1:n, n]  <- sapply(1:n, function(i){ciudades_dist_sin_mod[i, caminos[i,n]]})
+
+if(m == n-1){
+  costos[1:n, n]  <- sapply(1:n, function(i){ciudades_dist_sin_mod[caminos[i, n], i]})
+}
 costos_ciclos <- sapply(1:n, function(i){sum(costos[i,1:n])})
 ciclo_index <- which.min(costos_ciclos)
-camino_heuritica <- caminos[ciclo_index,]
- 
-ciudades_pos_df <- as.data.frame(ciudades_pos)
-g1 <- TSP_plot(ciudades_pos_df, camino_heuritica, n)
-g1
+camino_heuristica_original <- caminos[ciclo_index,]
+camino_heuristica <- camino_heuristica_original
+costo_sin_heuristica <- costos_ciclos[ciclo_index]
 ```
 
 ```{r}
-costos_ciclos[ciclo_index]
+index_function <- function(i,j){
+  return(which(caminos[i,]==j)[1])
+}
+
+index_matrix <- matrix(0L, nrow = n, ncol = n)
+caminos_ext <- matrix(0L, nrow = n, ncol = 2*n)
+costos_ext <- matrix(0L, nrow = n, ncol = 2*n)
+for(i in 1:n){
+  index_matrix[i,] <- sapply(1:n, function(j) index_function(i,j))
+  caminos_ext[i,] <-  c(caminos[i,], caminos[i,2:n])
+  costos_ext[i,] <-  c(costos[i,], costos[i,])
+}
+
+```
+
+```{r}
+exito <- 1
+while(exito>0){
+  exito <- 0
+  structure_list <- list()
+  structure_index_list <- list()
+  structure_cost_vector <- c()
+
+  for(len in 1:(n-1)){
+    ini <- 1
+    end <- len+1
+    for(path in 1:n){
+      structure <- caminos_ext[ciclo_index, ini:end]
+      structure_cost <- sum(costos_ext[ciclo_index, ini:(end-1)])
+      structure_length <- length(structure)
+      extreme1 <- structure[1]
+      extreme2 <- tail(structure, 1)
+      for(k in setdiff(1:n, ciclo_index)){
+        index_begin <- index_matrix[k,extreme1]
+        index_end <- index_matrix[k,extreme2]
+        if(!is.na(index_begin) && !is.na(index_end)){
+          if(index_begin > index_end){
+            index_aux <- index_begin
+            index_begin <- index_end
+            index_end <- index_aux
+          }
+          structure1 <- caminos_ext[k,index_begin:index_end]
+          structure1_length <- length(structure1)
+          structure2 <- caminos_ext[k,index_end:(index_begin+n)]
+          structure2_length <- length(structure2)
+          if(structure_length==structure1_length){
+            if(length(setdiff(structure, structure1))==0){
+              structure1_cost <- sum(costos_ext[k, index_begin:(index_end-1)])
+              if(structure1_cost < structure_cost){
+                exito <- exito + 1
+                structure_list[[exito]] <- structure1
+                structure_cost_vector[exito] <- structure1_cost - structure_cost
+                structure_index_list[[exito]] <- c(k, index_begin, index_end)
+              }
+            }
+          }
+          if(structure_length==structure2_length){
+            if(length(setdiff(structure, structure2))==0){
+              structure2_cost <- sum(costos_ext[k,index_end:(index_begin+n-1)])
+              if(structure2_cost < structure_cost){
+                exito <- exito + 1
+                structure_list[[exito]] <- structure2
+                structure_cost_vector[exito] <- structure2_cost - structure_cost
+                structure_index_list[[exito]] <- c(k, index_end, index_begin+n)
+              }
+
+            }
+          }
+        }
+      }
+      ini <- ini + 1
+      end <- end + 1
+    }
+  }
+
+  if(exito>0){
+    index_min <- which.min(structure_cost_vector)
+    index_replace <- structure_index_list[[index_min]][1]
+    index_begin <- structure_index_list[[index_min]][2]
+    index_end <- structure_index_list[[index_min]][3]
+    structure_replace <- structure_list[[index_min]]
+    ini <- index_matrix[ciclo_index, structure_replace[1]]
+    end <- index_matrix[ciclo_index,tail(structure_replace, 1)]
+    if(ini > end){
+      aux <- ini
+      ini <- end
+      end <- aux
+      structure_replace <- rev(structure_replace)
+    }
+    caminos[ciclo_index,ini:end] <- structure_replace
+    costos[ciclo_index, ini:(end-1)] <- costos_ext[index_replace, index_begin:(index_end-1)]
+    for(i in 1:n){
+      index_matrix[i,] <- sapply(1:n, function(j) index_function(i,j))
+      caminos_ext[i,] <-  c(caminos[i,], caminos[i,2:n])
+      costos_ext[i,] <-  c(costos[i,], costos[i,])
+    }
+  }
+}
+```
+
+```{r}
+costos_ciclos <- sapply(1:n, function(i){sum(costos[i,1:n])})
+camino_heuristica <- caminos[ciclo_index,]
+```
+
+```{r}
+costo_con_heuristica <- costos_ciclos[ciclo_index]
+```
+
+```{r}
+ciudades_pos_df <- as.data.frame(ciudades_pos)
+g1 <- TSP_plot(ciudades_pos_df, camino_heuristica_original, camino_heuristica_original) +  ggtitle("Antes del Algoritmo")  + labs (x = costo_sin_heuristica, y = "")
+g2 <- TSP_plot(ciudades_pos_df, camino_heuristica, camino_heuristica_original) +  ggtitle("Después del Algoritmo")  + labs (x = costo_con_heuristica, y = "")
+grid.arrange (g1, g2, nrow=1)
 ```
