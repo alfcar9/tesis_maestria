@@ -16,8 +16,10 @@ library(gridExtra)
 
 # Parameters
 ```{r}
-n <- 50 # Number of Nodes in Plot
-number_neighbors <- floor(n/3) # Number of the first kth neighbors, the rest edges will get eliminated
+n <- 75 # Number of Nodes in Plot
+proportion_edges <- 1/2
+greedy <- 3
+number_neighbors <- floor(n*proportion_edges) # Number of the first kth neighbors, the rest edges will get eliminated
 ```
 
 # Functions
@@ -153,7 +155,7 @@ for(num_iter in 1:m){
      ciudad_actual <- caminos[i, num_iter]
      ciudades_vecinas_por_recorrer <- setdiff(vecinos_lista[[ciudad_actual]], caminos[i, 1:num_iter])
      grado_vecinos_por_recorrer <- grado_vecinos_lista[[i]][ciudades_vecinas_por_recorrer]
-     boolean_neighbors <- grado_vecinos_por_recorrer > 2
+     boolean_neighbors <- grado_vecinos_por_recorrer > greedy
      if(all(boolean_neighbors)){
        dist_min <- Inf
        for(j in ciudades_vecinas_por_recorrer){
@@ -269,6 +271,7 @@ while(exito>0){
     index_begin <- structure_index_list[[index_min]][2]
     index_end <- structure_index_list[[index_min]][3]
     structure_replace <- structure_list[[index_min]]
+    costos_replace <- costos_ext[index_replace, index_begin:(index_end-1)]
     ini <- index_matrix[ciclo_index, structure_replace[1]]
     end <- index_matrix[ciclo_index,tail(structure_replace, 1)]
     if(ini > end){
@@ -276,9 +279,26 @@ while(exito>0){
       ini <- end
       end <- aux
       structure_replace <- rev(structure_replace)
+      costos_replace <- rev(costos_replace)
     }
-    caminos[ciclo_index,ini:end] <- structure_replace
-    costos[ciclo_index, ini:(end-1)] <- costos_ext[index_replace, index_begin:(index_end-1)]
+    if(length(ini:end) == length(structure_replace)){
+      caminos[ciclo_index,ini:end] <- structure_replace
+      costos[ciclo_index, ini:(end-1)] <- costos_replace
+    }
+    else{
+      edges_costs <- costos_replace
+      index_cut <- which(structure == ciclo_index)
+      structure_head <- structure[1:index_cut]
+      structure_tail <- structure[-1:-(index_cut-1)]
+      edges_costs_head <- edges_costs[1:(index_cut-1)]
+      edges_costs_tail <- edges_costs[-1:-(index_cut-1)]
+      begin_index <- length(structure_head) + 1
+      end_index <- n+1 - length(structure_tail)
+      caminos[ciclo_index,] <- c(structure_tail, caminos[ciclo_index,begin_index:end_index], structure_head)
+      begin_index <- length(structure_head)
+      costos[ciclo_index,] <- c(edges_costs_tail, costos[ciclo_index, begin_index:end_index], edges_costs_head)
+      print("Warning")
+    }
     for(i in 1:n){
       index_matrix[i,] <- sapply(1:n, function(j) index_function(i,j))
       caminos_ext[i,] <-  c(caminos[i,], caminos[i,2:n])
