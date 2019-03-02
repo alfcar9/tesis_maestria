@@ -106,14 +106,14 @@ greedy <- 3 # When a node has this number of neighbors then it adds to the path 
 # Main
 ```{r}
 ######################################## LEER ARCHIVO
-# instancia <- read_table2("~/Desktop/Tesis_Maestria/tesis_maestria/d198.tsp", skip = 4)
-# n <- nrow(instancia)
-# cities_pos <- instancia[2:(n-1),2:3]
-# n <- n-2
+instancia <- read_table2("~/Desktop/Tesis_Maestria/tesis_maestria/d198.tsp", skip = 4)
+n <- nrow(instancia)
+cities_pos <- instancia[2:(n-1),2:3]
+n <- n-2
 ######################################## GENERAR matrix ALEATORIA
-n <- 75
-cities_pos <- matrix(runif(2*n), ncol = 2) # Generate coordinates of n neighbors randomly
-cities_pos <- round(1000*(cities_pos)) # Round to integers
+# n <- 75
+# cities_pos <- matrix(runif(2*n), ncol = 2) # Generate coordinates of n neighbors randomly
+# cities_pos <- round(1000*(cities_pos)) # Round to integers
 #################################################################
 cities_pos <- as.matrix(cities_pos)
 colnames(cities_pos) <- c("V1", "V2")
@@ -123,10 +123,10 @@ cities_dist <- cities_dist_original # For last iteration, save original values
 
 ```{r}
 # Eliminate all but the first kth nearest edges for each node.
-number_neighbors <- floor(n*proportion_edges) # Number of the first kth neighbors, the rest edges will get eliminated
+total_neighbors <- floor(n*proportion_edges) # Number of the first kth neighbors, the rest edges will get eliminated
 # Eliminate all but the first kth nearest edges for each node.
 for(i in 1:n){
-  kth_near <- (cities_dist_original[i,] %>% sort())[number_neighbors]
+  kth_near <- (cities_dist_original[i,] %>% sort())[total_neighbors]
   for(j in 1:n){
       if(cities_dist_original[i,j] > kth_near){
         cities_dist[i,j] <- Inf
@@ -164,53 +164,62 @@ m <- n-1 # Si se quiere ver como se ve el camino en la m-ésima iteracion se pue
 for(num_iter in 1:m){
     for(i in 1:n){
       city_current <- paths[i, num_iter]
-      # Se calculan las ciudades que no se han visitado y se guardan como vector
+      # Se calculan las ciudades vecinas que no se han visitado
       cities_neighbors_to_go <- setdiff(neighbors_list[[city_current]], paths[i, 1:num_iter])
-      if(length(cities_neighbors_to_go) > 0){
-        # Se guardan en un vector solo los grados de los correspondientes nodos por visitar
-        degree_neighbors_to_go <- degree_neighbors_list[[i]][cities_neighbors_to_go]
-        # Se calcula un valor booleano que previene que nos olvidemos de un nodo. Si existe un nodo con pocos
-        # vecinos hay que visitarlo inmediatamente, sino, conviene visitar el más proximo.
-        immediate_neighbors <- degree_neighbors_to_go <= greedy
-        if(all(!immediate_neighbors)){
-          # En caso de que todos los nodos tengan multiples vecinos calcular el mas proximo
-          city_distances <- cities_dist_original[city_current, cities_neighbors_to_go]
-          dist_min <- min(city_distances)
-          city_min <- cities_neighbors_to_go[which.min(city_distances)]
-        }
-        else{
-        # En caso de que haya que visitar uno inmediatamente entonces añadirlo
-          city_index_next <- which.min(degree_neighbors_to_go)
-          city_min <- cities_neighbors_to_go[city_index_next]
-          dist_min <- cities_dist_original[city_current, city_min]
-       }
-       # Todos los vecinos que tengan asociado a la ciudad que se visita se les resta un grado
-       degree_neighbors_list[[i]][cities_neighbors_to_go] <- degree_neighbors_list[[i]][cities_neighbors_to_go] - 1
-       # Se actualiza el grado de la ciudad actual a 0.
-       degree_neighbors_list[[i]][city_current] <- 0
-       # Se actualiza la matriz de costo.
-       costs[i, num_iter] <- dist_min
-       paths[i, num_iter+1] <- city_min
+      number_neighbors <- length(cities_neighbors_to_go)
+      # Si no hay ciudades vecinas entonces se hace el calculo sobre todas las posibles ciudades
+      if(number_neighbors == 0){
+        cities_neighbors_to_go <- setdiff(1:n, paths[i, 1:num_iter])
+      }
+      # Se guardan en un vector solo los grados de los correspondientes nodos por visitar
+      degree_neighbors_to_go <- degree_neighbors_list[[i]][cities_neighbors_to_go]
+      # Se calcula un valor booleano que previene que nos olvidemos de un nodo. Si existe un nodo con pocos
+      # vecinos hay que visitarlo inmediatamente, sino, conviene visitar el más proximo.
+      immediate_neighbors <- degree_neighbors_to_go <= greedy
+      if(all(!immediate_neighbors)){
+        # En caso de que todos los nodos tengan multiples vecinos calcular el mas proximo
+        city_distances <- cities_dist_original[city_current, cities_neighbors_to_go]
+        dist_min <- min(city_distances)
+        city_min <- cities_neighbors_to_go[which.min(city_distances)]
       }
       else{
-        costs[i, num_iter] <- Inf
-        paths[i, num_iter+1] <- paths[i, num_iter] 
+      # En caso de que haya que visitar uno inmediatamente entonces añadirlo 
+        city_min <- cities_neighbors_to_go[which.min(degree_neighbors_to_go)]
+        dist_min <- cities_dist_original[city_current, city_min]
       }
+      # Todos los vecinos que tengan asociado a la ciudad que se visita se les resta un grado
+      if(number_neighbors!=0){
+         degree_neighbors_list[[i]][cities_neighbors_to_go] <- degree_neighbors_list[[i]][cities_neighbors_to_go] - 1  
+      }
+      # Se actualiza el grado de la ciudad actual a 0.
+      degree_neighbors_list[[i]][city_current] <- 0
+      # Se actualiza la matriz de costo.
+      costs[i, num_iter] <- dist_min
+      paths[i, num_iter+1] <- city_min
   }
 }
+# Se hace el costo de cerrar el ciclo.
 if(m == n-1){
   costs[1:n, n]  <- sapply(1:n, function(i){cities_dist_original[paths[i, n], i]})
 }
+# Se calcula el costo de cada ciclo
 costs_cycles <- sapply(1:n, function(i){sum(costs[i,])})
+# Es el indice del mejor ciclo
 cycle_index <- which.min(costs_cycles)
+# Se guarda el mejor ciclo y su costo
 path_min_noswap <- paths[cycle_index,]
 cost_min_noswap <- costs_cycles[cycle_index]
 ```
 
 ```{r}
+# Matriz que a cada fila corresponde un ciclo. Cada celda guarda que numero de visita es cada ciudad. Si en [1,2] = 13, entonces la 13ava ciudad visitada
+# en el ciclo 1 es la ciudad 2. 
 index_matrix <- matrix(0L, nrow = n, ncol = n)
+# Se generan los caminos extendidos para poder considerar en una sola matriz todos los caminos posibles leidos como secuencia
 paths_ext <- matrix(0L, nrow = n, ncol = 2*n)
+# Lo análogo con la funcion de costos
 costs_ext <- matrix(0L, nrow = n, ncol = 2*n)
+# Se generan estas estructuras
 for(i in 1:n){
   index_matrix[i,] <- sapply(1:n, function(j) index_function(i,j))
   paths_ext[i,] <-  c(paths[i,], paths[i,2:n])
@@ -219,95 +228,102 @@ for(i in 1:n){
 ```
 
 ```{r}
-exito <- 1
+exito <- 1 # Indica que se encontró alguna estructura que swapear, se define 1 para que entre al while al menos una vez
 while(exito>0){
-  exito <- 0
-  structure_list <- list()
-  structure_index_list <- list()
-  structure_cost_vector <- c()
-  for(len in 1:(n-1)){
-    ini <- 1
-    end <- len+1
-    for(path in 1:n){
-      structure <- paths_ext[cycle_index, ini:end]
-      structure_cost <- sum(costs_ext[cycle_index, ini:(end-1)])
-      structure_length <- length(structure)
-      extreme1 <- structure[1]
-      extreme2 <- tail(structure, 1)
-      for(k in setdiff(1:n, cycle_index)){
-        index_begin <- index_matrix[k,extreme1]
-        index_end <- index_matrix[k,extreme2]
-        if(!is.na(index_begin) && !is.na(index_end)){
-          if(index_begin > index_end){
-            index_aux <- index_begin
-            index_begin <- index_end
-            index_end <- index_aux
-          }
-          structure1 <- paths_ext[k,index_begin:index_end]
-          structure1_length <- length(structure1)
-          structure2 <- paths_ext[k,index_end:(index_begin+n)]
-          structure2_length <- length(structure2)
-          if(structure_length==structure1_length){
-            if(length(setdiff(structure, structure1))==0){
-              structure1_cost <- sum(costs_ext[k, index_begin:(index_end-1)])
-              if(structure1_cost < structure_cost){
-                exito <- exito + 1
-                structure_list[[exito]] <- structure1
-                structure_cost_vector[exito] <- structure1_cost - structure_cost
-                structure_index_list[[exito]] <- c(k, index_begin, index_end)
-              }
+  exito <- 0  # no se han encontrado estructuras swapeables
+  structure_list <- list() # se guardan las estructuras swapeables
+  structure_index_list <- list()  # se guarda donde inicia la estrucutra
+  structure_cost_vector <- c() # se guarda el costo total de cada estructura
+  for(len in 3:(n-1)){  # se fija una longitud
+    ini <- 1            # comenzando en el primer nodo
+    end <- len+1        # hasta el nodo len + 1 se hace lo siguiente 
+    for(path in 1:n){   # para cada longitud existen siempre n paths posibles por revisar
+      structure <- paths_ext[cycle_index, ini:end] # se guarda la secuencia de ciudades
+      structure_cost <- sum(costs_ext[cycle_index, ini:(end-1)]) # el costo de las transiciones
+      structure_length <- len + 1 # la longitud del vector que esta dada por len + 1
+      extreme1 <- structure[1] # se guardan los extremos, la cabeza
+      extreme2 <- tail(structure, 1) # y la cola
+      for(k in setdiff(1:n, cycle_index)){# vamos a buscar esta estructura en cada uno de los posibles caminos
+        index_begin <- index_matrix[k,extreme1] # obtenemos el indice donde se visita al extremo 1
+        index_end <- index_matrix[k,extreme2] # y el indice donde se visita al extremo 2
+        if(index_begin > index_end){ # si los indices estan al reves se intercambian
+          index_aux <- index_begin
+          index_begin <- index_end
+          index_end <- index_aux
+        }
+        structure1 <- paths_ext[k,index_begin:index_end] # se busca usando los extremos esa estructura en el ciclo k
+        structure1_length <- length(structure1) # se toma su longitud
+        structure2 <- paths_ext[k,index_end:(index_begin+n)] # se considera el camino complemento del primero
+        structure2_length <- length(structure2) # se toma su longitud
+        if(structure_length==structure1_length){ # si tienen longitudes iguales
+          if(length(setdiff(structure, structure1))==0){ #y si tienen las mismas ciudades
+            structure1_cost <- sum(costs_ext[k, index_begin:(index_end-1)]) # considera el costo
+            if(structure1_cost < structure_cost){ # si es mas barato es posible hacer un swap
+              exito <- exito + 1 # considera que llevas un exito
+              structure_list[[exito]] <- structure1 # agregalo a la lista
+              structure_cost_vector[exito] <- structure1_cost - structure_cost # agrega la utilidad 
+              structure_index_list[[exito]] <- c(k, index_begin, index_end) # informacion de donde empieza y donde acaba
             }
           }
-          if(structure_length==structure2_length){
-            if(length(setdiff(structure, structure2))==0){
-              structure2_cost <- sum(costs_ext[k,index_end:(index_begin+n-1)])
-              if(structure2_cost < structure_cost){
-                exito <- exito + 1
-                structure_list[[exito]] <- structure2
-                structure_cost_vector[exito] <- structure2_cost - structure_cost
-                structure_index_list[[exito]] <- c(k, index_end, index_begin+n)
-              }
+        }
+        if(structure_length==structure2_length){ # se hace lo análogo con el camino complemento
+          if(length(setdiff(structure, structure2))==0){
+            structure2_cost <- sum(costs_ext[k,index_end:(index_begin+n-1)])
+            if(structure2_cost < structure_cost){
+              exito <- exito + 1
+              structure_list[[exito]] <- structure2
+              structure_cost_vector[exito] <- structure2_cost - structure_cost
+              structure_index_list[[exito]] <- c(k, index_end, index_begin+n)
             }
           }
         }
       }
+      # se incrementan el incio y fin y se revisan asi los n posibles caminos
       ini <- ini + 1
       end <- end + 1
     }
   }
   if(exito>0){
-    index_min <- which.min(structure_cost_vector)
-    index_replace <- structure_index_list[[index_min]][1]
-    index_begin <- structure_index_list[[index_min]][2]
-    index_end <- structure_index_list[[index_min]][3]
-    structure_replace <- structure_list[[index_min]]
+    index_min <- which.min(structure_cost_vector) # el numero de exito que sera reemplazado
+    index_replace <- structure_index_list[[index_min]][1] # corresponde al ciclo numero k
+    index_begin <- structure_index_list[[index_min]][2] # que comienza en la ciudad index_begin
+    index_end <- structure_index_list[[index_min]][3] # termina en la ciudad index_end
+    structure_replace <- structure_list[[index_min]] # la estructura a remplazarse
     costs_replace <- costs_ext[index_replace, index_begin:(index_end-1)]
-    ini <- index_matrix[cycle_index, structure_replace[1]]
-    end <- index_matrix[cycle_index, tail(structure_replace, 1)]
-    if(ini > end){
-      aux <- ini
-      ini <- end
-      end <- aux
-      structure_replace <- rev(structure_replace)
-      costs_replace <- rev(costs_replace)
-    }
-    if(length(ini:end) == length(structure_replace)){
-      paths[cycle_index,ini:end] <- structure_replace
-      costs[cycle_index, ini:(end-1)] <- costs_replace
+    index_head <- index_matrix[cycle_index, structure_replace[1]]
+    index_tail <- index_matrix[cycle_index, tail(structure_replace, 1)]
+    if(length(index_head:index_tail) == length(structure_replace)){
+      # En este caso se puede sustituir la estructura en el camino sin necesidad de cortarlo
+      # Puede ser que haya que ponerlo tal y como esta o en reversa
+      if(index_head > index_tail){
+        structure_replace <- rev(structure_replace)
+        costs_replace <- rev(costs_replace)
+        aux <- index_head
+        index_head <- index_tail
+        index_tail <- aux  
+      }
+      paths[cycle_index, index_head:index_tail] <- structure_replace
+      costs[cycle_index, index_head:(index_tail-1)] <- costs_replace
     }
     else{
+      if(index_head < index_tail){
+        structure_replace <- rev(structure_replace)
+        costs_replace <- rev(costs_replace)
+        aux <- index_head
+        index_head <- index_tail
+        index_tail <- aux  
+      }
+      index_cut <- which(structure_replace == cycle_index)
+      structure_head <- structure_replace[1:index_cut]
+      structure_tail <- structure_replace[-1:-(index_cut-1)]
       edges_costs <- costs_replace
-      index_cut <- which(structure == cycle_index)
-      structure_head <- structure[1:index_cut]
-      structure_tail <- structure[-1:-(index_cut-1)]
       edges_costs_head <- edges_costs[1:(index_cut-1)]
       edges_costs_tail <- edges_costs[-1:-(index_cut-1)]
-      begin_index <- length(structure_head) + 1
-      end_index <- n+1 - length(structure_tail)
-      paths[cycle_index,] <- c(structure_tail, paths[cycle_index,begin_index:end_index], structure_head)
-      begin_index <- length(structure_head)
-      costs[cycle_index,] <- c(edges_costs_tail, costs[cycle_index, begin_index:end_index], edges_costs_head)
-      print("Warning")
+      index_begin <- index_tail + 1 # El primer indice que no es de la estructura
+      index_end <- index_head-1 # El ultimo indice que no es de la estructura
+      paths[cycle_index,] <- c(structure_tail, paths[cycle_index, index_begin:index_end], structure_head)
+      costs[cycle_index,] <- c(edges_costs_tail, costs[cycle_index, (index_begin-1):index_end], edges_costs_head)
+      print("Warning: this section of code is prone to error, it was programmed by an idiot")
     }
     for(i in 1:n){
       index_matrix[i,] <- sapply(1:n, function(j) index_function(i,j))
