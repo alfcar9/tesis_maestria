@@ -14,58 +14,64 @@ library(tidyverse)
 library(gridExtra)
 ```
 
-# Parameters
-```{r}
-n <- 75 # Number of Nodes in Plot
-proportion_edges <- 1/2
-greedy <- 3
-number_neighbors <- floor(n*proportion_edges) # Number of the first kth neighbors, the rest edges will get eliminated
-```
-
 # Functions
 ```{r}
 # Define Euclidean distance funcion
-dist_euclidean <- function(i1, i2, j1,j2){ 
-  return(sqrt((i1-j1)^2+(i2-j2)^2))
+dist_euclidean <- function(i, j){
+  result <- (i-j)^2 %>% sum() %>% sqrt()
+  return(result)
 }
-
 # Given set of coordiantes calculates euclidean distance and adds noice.
-matrix_euclidean <- function(ciudades_pos){
-  ciudades_dist <- matrix(integer(n^2), ncol = n)
+matrix_euclidean <- function(matrix_pos){
+  matrix_dist <- matrix(integer(n^2), ncol = n)
   for(i in 1:(n-1)){
-    i1 <- ciudades_pos[i,1] 
-    i2 <- ciudades_pos[i,2]
+    i_vec <- matrix_pos[i,]
     for(j in (i+1):n){
-      j1 <- ciudades_pos[j,1] 
-      j2 <- ciudades_pos[j,2] 
-      ciudades_dist[i,j] <- (dist_euclidean(i1, i2, j1, j2) + ifelse(i==j,0, (rnorm(1, sd = 0)^2))) %>% round()
-      ciudades_dist[j,i] <- ciudades_dist[i,j]
+      j_vec <- matrix_pos[j,]
+      matrix_dist[i,j] <- dist_euclidean(i_vec, j_vec)  %>% round(2)
+      matrix_dist[j,i] <- matrix_dist[i,j]
     }
   }
-  return(ciudades_dist)
+  return(matrix_dist)
+}
+
+# Hace simétrica la matrix
+matrix_symmetric <- function(matrix){
+  for(i in 1:(n-1)){
+    for(j in (i+1):n){
+        if(matrix[i,j] != matrix[j,i]){
+          if(matrix[i,j] < matrix[j,i]){
+            matrix[j,i] <- matrix[i,j]
+          }
+          else{
+            matrix[i,j] <- matrix[j,i]
+          }
+        }
+     }
+  }
+  return(matrix)
 }
 
 # Updates distance matrix when triangle Inequality is not satissfied
-desigualdad_triangulo <- function(ciudades_dist)
+desigualdad_triangulo <- function(cities_dist)
   for(i in 1:(n-1)){
     for(j in (i+1):n){
-      distancia_minima <- ciudades_dist[i,j]
+      distancia_minima <- cities_dist[i,j]
       set <- setdiff(1:n, c(i,j))
       for(k in set){
-        distancia_indirecta <- ciudades_dist[i,k] + ciudades_dist[k,j]
+        distancia_indirecta <- cities_dist[i,k] + cities_dist[k,j]
         if(distancia_indirecta < distancia_minima){
           distancia_minima <- distancia_minima
         }
       }
-      ciudades_dist[i,j] <- distancia_minima
-      ciudades_dist[j,i] <- distancia_minima
+      cities_dist[i,j] <- distancia_minima
+      cities_dist[j,i] <- distancia_minima
     }
-    return(ciudades_dist)
+    return(cities_dist)
   }
-
-TSP_plot <- function(ciudades_pos_df, camino_heuristica, camino_heuristica_original){
-  n <- nrow(ciudades_pos_df)
-  g <- ggplot(ciudades_pos_df, aes(x = V1, y = V2)) + geom_point() + theme_bw() + geom_text(aes(label=c(1:n)), hjust=0, vjust=0)
+TSP_plot <- function(cities_pos_df, camino_heuristica, camino_heuristica_original){
+  n <- nrow(cities_pos_df)
+  g <- ggplot(cities_pos_df, aes(x = V1, y = V2)) + geom_point() + theme_bw() + geom_text(aes(label=c(1:n)), hjust=0, vjust=0)
   if(all(!camino_heuristica==0)){
     m <- n
   }
@@ -73,136 +79,143 @@ TSP_plot <- function(ciudades_pos_df, camino_heuristica, camino_heuristica_origi
    m <- min(which(camino_heuristica==0))-2 
   }
   for(i in 1:m){
-     i1 <- ciudades_pos_df[camino_heuristica[i],1]
-     i2 <- ciudades_pos_df[camino_heuristica[i],2]
-     j1 <- ciudades_pos_df[camino_heuristica[i+1],1]
-     j2 <- ciudades_pos_df[camino_heuristica[i+1],2]
+     i_vec <- flatten_dbl(cities_pos_df[camino_heuristica[i],])
+     j_vec <- flatten_dbl(cities_pos_df[camino_heuristica[i+1],])
      if(camino_heuristica[i] == camino_heuristica_original[i]){
-        g <- g + geom_segment(x = i1 , xend = j1, y = i2, yend = j2, color="black")
+        g <- g + geom_segment(x = i_vec[1], xend = j_vec[1], y = i_vec[2], yend = j_vec[2], color="black")
      }
      else{
-       g <- g + geom_segment(x = i1 , xend = j1, y = i2, yend = j2, color="red") 
+       g <- g + geom_segment(x = i_vec[1] , xend = j_vec[1], y = i_vec[2], yend = j_vec[2], color="red") 
      }
   }
   return(g)
 }
+
+index_function <- function(i,j){
+  return(which(paths[i,]==j)[1])
+}
+```
+
+# Hyper parameters
+```{r}
+set.seed(11212)
+proportion_edges <- 1/2 # Each node will only have this proportion of neighbors with respect the n neighbors
+greedy <- 3 # When a node has this number of neighbors then it adds to the path regardless of the cost
 ```
 
 # Main
 ```{r}
-set.seed(11212)
-
-ciudades_pos <- matrix(runif(2*n), ncol = 2) # Generate coordinates of n neighbors randomly
-ciudades_pos <- round(1000*(ciudades_pos)) # Round to integers
-
-#Generate distance matrix
-ciudades_dist <- matrix_euclidean(ciudades_pos)
-
-# For last iteration, save original values
-ciudades_dist_sin_mod <- ciudades_dist
-ciudades_dist <- desigualdad_triangulo(ciudades_dist)
+######################################## LEER ARCHIVO
+# instancia <- read_table2("~/Desktop/Tesis_Maestria/tesis_maestria/d198.tsp", skip = 4)
+# n <- nrow(instancia)
+# cities_pos <- instancia[2:(n-1),2:3]
+# n <- n-2
+######################################## GENERAR matrix ALEATORIA
+n <- 75
+cities_pos <- matrix(runif(2*n), ncol = 2) # Generate coordinates of n neighbors randomly
+cities_pos <- round(1000*(cities_pos)) # Round to integers
+#################################################################
+cities_pos <- as.matrix(cities_pos)
+colnames(cities_pos) <- c("V1", "V2")
+cities_dist_original <- matrix_euclidean(cities_pos) # Generate distance matrix
+cities_dist <- cities_dist_original # For last iteration, save original values
 ```
 
 ```{r}
 # Eliminate all but the first kth nearest edges for each node.
-vecinos_lista <- list()
+number_neighbors <- floor(n*proportion_edges) # Number of the first kth neighbors, the rest edges will get eliminated
+# Eliminate all but the first kth nearest edges for each node.
 for(i in 1:n){
-  kth_near <- (ciudades_dist_sin_mod[i,] %>% sort())[number_neighbors]
+  kth_near <- (cities_dist_original[i,] %>% sort())[number_neighbors]
   for(j in 1:n){
-      if(ciudades_dist_sin_mod[i,j] > kth_near){
-        ciudades_dist[i,j] <- Inf
+      if(cities_dist_original[i,j] > kth_near){
+        cities_dist[i,j] <- Inf
       }
    }
 }
 
-# Hace simétrica la matriz
-for(i in 1:n){
-  for(j in 1:n){
-      if(ciudades_dist[i,j] != ciudades_dist[j,i]){
-        if(ciudades_dist[i,j] < ciudades_dist[j,i]){
-          ciudades_dist[j,i] <- ciudades_dist[i,j]
-        }
-        else{
-          ciudades_dist[i,j] <- ciudades_dist[j,i]
-        }
-      }
-   }
-}
+# It is possible that the resulting matrix is not symmetric because there is no symmetry in the fact that 
+# the kth neighbor v2 for a v1 node might not be the kth neighbor v1 for v2.
+cities_dist <- matrix_symmetric(cities_dist)
 
-for(i in 1:n){
-  vecinos_lista[[i]] <- which(as.logical((ciudades_dist[i,] < Inf)*(ciudades_dist[i,] > 0) %>% as.integer()))
-}
 
+# We define a list that has the neighbors of each node. Because each node can have different amount of neighbors a matrix
+# is not an appropriate structure.
+neighbors_list <- list()
+for(i in 1:n){
+  neighbors_list[[i]] <- which(as.logical((cities_dist[i,] < Inf)*(cities_dist[i,] > 0) %>% as.integer()))
+}
 # Estricturas a usar
-caminos <- matrix(integer((n+1)*n), nrow = n)
-caminos[1:n,1] <- 1:n
-caminos[1:n,(n+1)] <- 1:n
-costos <- matrix(integer(n^2), nrow = n)
-
-# Vector con numero de vecinos
-grado_vecinos <- sapply(1:n, function(i){vecinos_lista[[i]] %>% length()})
-grado_vecinos_lista <- list()
+paths <- matrix(integer((n+1)*n), nrow = n) # The Paths starting at each node. In each row we try to form a cycle.
+paths[,c(1,(n+1))] <- 1:n
+costs <- matrix(integer(n^2), nrow = n) # The cost of traveling from [i,j] to [i,j+1]
+# Vector con numero de neighbors
+degree_neighbors <- sapply(1:n, function(i){neighbors_list[[i]] %>% length()}) #Number of neighbors of each node
+degree_neighbors_list <- list() # For each cycle we need to keep control of how many neighbors are left. We define a list.
 for(i in 1:n){
-  grado_vecinos_lista[[i]] <- grado_vecinos
+  degree_neighbors_list[[i]] <- degree_neighbors
 }
 ```
 
 #Iteraciones
 ```{r}
-m <- n-1
+# Primero generamos un cycle hamiltoniano para cada nodo.
+m <- n-1 # Si se quiere ver como se ve el camino en la m-ésima iteracion se puede ajustar, sino dejar m = n-1
 for(num_iter in 1:m){
-  for(i in 1:n){
-     ciudad_actual <- caminos[i, num_iter]
-     ciudades_vecinas_por_recorrer <- setdiff(vecinos_lista[[ciudad_actual]], caminos[i, 1:num_iter])
-     grado_vecinos_por_recorrer <- grado_vecinos_lista[[i]][ciudades_vecinas_por_recorrer]
-     boolean_neighbors <- grado_vecinos_por_recorrer > greedy
-     if(all(boolean_neighbors)){
-       dist_min <- Inf
-       for(j in ciudades_vecinas_por_recorrer){
-           dist_ciudad <- ciudades_dist_sin_mod[ciudad_actual, j]
-           if(dist_ciudad < dist_min){
-             dist_min <- dist_ciudad
-             ciudad_min <- j
-           }
+    for(i in 1:n){
+      city_current <- paths[i, num_iter]
+      # Se calculan las ciudades que no se han visitado y se guardan como vector
+      cities_neighbors_to_go <- setdiff(neighbors_list[[city_current]], paths[i, 1:num_iter])
+      if(length(cities_neighbors_to_go) > 0){
+        # Se guardan en un vector solo los grados de los correspondientes nodos por visitar
+        degree_neighbors_to_go <- degree_neighbors_list[[i]][cities_neighbors_to_go]
+        # Se calcula un valor booleano que previene que nos olvidemos de un nodo. Si existe un nodo con pocos
+        # vecinos hay que visitarlo inmediatamente, sino, conviene visitar el más proximo.
+        immediate_neighbors <- degree_neighbors_to_go <= greedy
+        if(all(!immediate_neighbors)){
+          # En caso de que todos los nodos tengan multiples vecinos calcular el mas proximo
+          city_distances <- cities_dist_original[city_current, cities_neighbors_to_go]
+          dist_min <- min(city_distances)
+          city_min <- cities_neighbors_to_go[which.min(city_distances)]
+        }
+        else{
+        # En caso de que haya que visitar uno inmediatamente entonces añadirlo
+          city_index_next <- which.min(degree_neighbors_to_go)
+          city_min <- cities_neighbors_to_go[city_index_next]
+          dist_min <- cities_dist_original[city_current, city_min]
        }
-     }
-     else{
-       ciudad_min <- (ciudades_vecinas_por_recorrer[!boolean_neighbors])[1]
-       dist_min <- ciudades_dist_sin_mod[ciudad_actual, ciudad_min]
-     }
-     for(j in ciudades_vecinas_por_recorrer){
-       grado_vecinos_lista[[i]][j] <- grado_vecinos_lista[[i]][j] - 1
-     }
-     grado_vecinos_lista[[i]][ciudad_actual] <- 0
-     costos[i, num_iter] <- dist_min
-     caminos[i, num_iter+1] <- ciudad_min
+       # Todos los vecinos que tengan asociado a la ciudad que se visita se les resta un grado
+       degree_neighbors_list[[i]][cities_neighbors_to_go] <- degree_neighbors_list[[i]][cities_neighbors_to_go] - 1
+       # Se actualiza el grado de la ciudad actual a 0.
+       degree_neighbors_list[[i]][city_current] <- 0
+       # Se actualiza la matriz de costo.
+       costs[i, num_iter] <- dist_min
+       paths[i, num_iter+1] <- city_min
+      }
+      else{
+        costs[i, num_iter] <- Inf
+        paths[i, num_iter+1] <- paths[i, num_iter] 
+      }
   }
 }
-
 if(m == n-1){
-  costos[1:n, n]  <- sapply(1:n, function(i){ciudades_dist_sin_mod[caminos[i, n], i]})
+  costs[1:n, n]  <- sapply(1:n, function(i){cities_dist_original[paths[i, n], i]})
 }
-costos_ciclos <- sapply(1:n, function(i){sum(costos[i,1:n])})
-ciclo_index <- which.min(costos_ciclos)
-camino_heuristica_original <- caminos[ciclo_index,]
-camino_heuristica <- camino_heuristica_original
-costo_sin_heuristica <- costos_ciclos[ciclo_index]
+costs_cycles <- sapply(1:n, function(i){sum(costs[i,])})
+cycle_index <- which.min(costs_cycles)
+path_min_noswap <- paths[cycle_index,]
+cost_min_noswap <- costs_cycles[cycle_index]
 ```
 
 ```{r}
-index_function <- function(i,j){
-  return(which(caminos[i,]==j)[1])
-}
-
 index_matrix <- matrix(0L, nrow = n, ncol = n)
-caminos_ext <- matrix(0L, nrow = n, ncol = 2*n)
-costos_ext <- matrix(0L, nrow = n, ncol = 2*n)
+paths_ext <- matrix(0L, nrow = n, ncol = 2*n)
+costs_ext <- matrix(0L, nrow = n, ncol = 2*n)
 for(i in 1:n){
   index_matrix[i,] <- sapply(1:n, function(j) index_function(i,j))
-  caminos_ext[i,] <-  c(caminos[i,], caminos[i,2:n])
-  costos_ext[i,] <-  c(costos[i,], costos[i,])
+  paths_ext[i,] <-  c(paths[i,], paths[i,2:n])
+  costs_ext[i,] <-  c(costs[i,], costs[i,])
 }
-
 ```
 
 ```{r}
@@ -212,17 +225,16 @@ while(exito>0){
   structure_list <- list()
   structure_index_list <- list()
   structure_cost_vector <- c()
-
   for(len in 1:(n-1)){
     ini <- 1
     end <- len+1
     for(path in 1:n){
-      structure <- caminos_ext[ciclo_index, ini:end]
-      structure_cost <- sum(costos_ext[ciclo_index, ini:(end-1)])
+      structure <- paths_ext[cycle_index, ini:end]
+      structure_cost <- sum(costs_ext[cycle_index, ini:(end-1)])
       structure_length <- length(structure)
       extreme1 <- structure[1]
       extreme2 <- tail(structure, 1)
-      for(k in setdiff(1:n, ciclo_index)){
+      for(k in setdiff(1:n, cycle_index)){
         index_begin <- index_matrix[k,extreme1]
         index_end <- index_matrix[k,extreme2]
         if(!is.na(index_begin) && !is.na(index_end)){
@@ -231,13 +243,13 @@ while(exito>0){
             index_begin <- index_end
             index_end <- index_aux
           }
-          structure1 <- caminos_ext[k,index_begin:index_end]
+          structure1 <- paths_ext[k,index_begin:index_end]
           structure1_length <- length(structure1)
-          structure2 <- caminos_ext[k,index_end:(index_begin+n)]
+          structure2 <- paths_ext[k,index_end:(index_begin+n)]
           structure2_length <- length(structure2)
           if(structure_length==structure1_length){
             if(length(setdiff(structure, structure1))==0){
-              structure1_cost <- sum(costos_ext[k, index_begin:(index_end-1)])
+              structure1_cost <- sum(costs_ext[k, index_begin:(index_end-1)])
               if(structure1_cost < structure_cost){
                 exito <- exito + 1
                 structure_list[[exito]] <- structure1
@@ -248,14 +260,13 @@ while(exito>0){
           }
           if(structure_length==structure2_length){
             if(length(setdiff(structure, structure2))==0){
-              structure2_cost <- sum(costos_ext[k,index_end:(index_begin+n-1)])
+              structure2_cost <- sum(costs_ext[k,index_end:(index_begin+n-1)])
               if(structure2_cost < structure_cost){
                 exito <- exito + 1
                 structure_list[[exito]] <- structure2
                 structure_cost_vector[exito] <- structure2_cost - structure_cost
                 structure_index_list[[exito]] <- c(k, index_end, index_begin+n)
               }
-
             }
           }
         }
@@ -264,62 +275,57 @@ while(exito>0){
       end <- end + 1
     }
   }
-
   if(exito>0){
     index_min <- which.min(structure_cost_vector)
     index_replace <- structure_index_list[[index_min]][1]
     index_begin <- structure_index_list[[index_min]][2]
     index_end <- structure_index_list[[index_min]][3]
     structure_replace <- structure_list[[index_min]]
-    costos_replace <- costos_ext[index_replace, index_begin:(index_end-1)]
-    ini <- index_matrix[ciclo_index, structure_replace[1]]
-    end <- index_matrix[ciclo_index,tail(structure_replace, 1)]
+    costs_replace <- costs_ext[index_replace, index_begin:(index_end-1)]
+    ini <- index_matrix[cycle_index, structure_replace[1]]
+    end <- index_matrix[cycle_index, tail(structure_replace, 1)]
     if(ini > end){
       aux <- ini
       ini <- end
       end <- aux
       structure_replace <- rev(structure_replace)
-      costos_replace <- rev(costos_replace)
+      costs_replace <- rev(costs_replace)
     }
     if(length(ini:end) == length(structure_replace)){
-      caminos[ciclo_index,ini:end] <- structure_replace
-      costos[ciclo_index, ini:(end-1)] <- costos_replace
+      paths[cycle_index,ini:end] <- structure_replace
+      costs[cycle_index, ini:(end-1)] <- costs_replace
     }
     else{
-      edges_costs <- costos_replace
-      index_cut <- which(structure == ciclo_index)
+      edges_costs <- costs_replace
+      index_cut <- which(structure == cycle_index)
       structure_head <- structure[1:index_cut]
       structure_tail <- structure[-1:-(index_cut-1)]
       edges_costs_head <- edges_costs[1:(index_cut-1)]
       edges_costs_tail <- edges_costs[-1:-(index_cut-1)]
       begin_index <- length(structure_head) + 1
       end_index <- n+1 - length(structure_tail)
-      caminos[ciclo_index,] <- c(structure_tail, caminos[ciclo_index,begin_index:end_index], structure_head)
+      paths[cycle_index,] <- c(structure_tail, paths[cycle_index,begin_index:end_index], structure_head)
       begin_index <- length(structure_head)
-      costos[ciclo_index,] <- c(edges_costs_tail, costos[ciclo_index, begin_index:end_index], edges_costs_head)
+      costs[cycle_index,] <- c(edges_costs_tail, costs[cycle_index, begin_index:end_index], edges_costs_head)
       print("Warning")
     }
     for(i in 1:n){
       index_matrix[i,] <- sapply(1:n, function(j) index_function(i,j))
-      caminos_ext[i,] <-  c(caminos[i,], caminos[i,2:n])
-      costos_ext[i,] <-  c(costos[i,], costos[i,])
+      paths_ext[i,] <-  c(paths[i,], paths[i,2:n])
+      costs_ext[i,] <-  c(costs[i,], costs[i,])
     }
   }
 }
 ```
 
 ```{r}
-costos_ciclos <- sapply(1:n, function(i){sum(costos[i,1:n])})
-camino_heuristica <- caminos[ciclo_index,]
+path_min_swap <- paths[cycle_index,]
+cost_min_swap <- sum(costs[cycle_index,])
 ```
 
 ```{r}
-costo_con_heuristica <- costos_ciclos[ciclo_index]
-```
-
-```{r}
-ciudades_pos_df <- as.data.frame(ciudades_pos)
-g1 <- TSP_plot(ciudades_pos_df, camino_heuristica_original, camino_heuristica_original) +  ggtitle("Antes del Algoritmo")  + labs (x = costo_sin_heuristica, y = "")
-g2 <- TSP_plot(ciudades_pos_df, camino_heuristica, camino_heuristica_original) +  ggtitle("Después del Algoritmo")  + labs (x = costo_con_heuristica, y = "")
+cities_pos_df <- as.data.frame(cities_pos)
+g1 <- TSP_plot(cities_pos_df, path_min_noswap, path_min_noswap) +  ggtitle("Sin Swapping")  + labs (x = cost_min_noswap, y = "")
+g2 <- TSP_plot(cities_pos_df, path_min_swap, path_min_noswap) +  ggtitle("With Swapping")  + labs (x = cost_min_swap, y = "")
 grid.arrange (g1, g2, nrow=1)
 ```
