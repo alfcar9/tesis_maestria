@@ -100,20 +100,21 @@ index_function <- function(i,j){
 ```{r}
 set.seed(11212)
 proportion_edges <- 1/2 # Each node will only have this proportion of neighbors with respect the n neighbors
-greedy <- 3 # When a node has this number of neighbors then it adds to the path regardless of the cost
+immediate_value <- 3 # When a node has this number of neighbors then it adds to the path regardless of the cost
 ```
 
 # Main
 ```{r}
+start_time <- Sys.time()
 ######################################## LEER ARCHIVO
-instancia <- read_table2("~/Desktop/Tesis_Maestria/tesis_maestria/d198.tsp", skip = 4)
+instancia <- read_table2("~/Desktop/Tesis_Maestria/tesis_maestria/lin105.tsp", skip = 6, col_names = FALSE)
 n <- nrow(instancia)
-cities_pos <- instancia[2:(n-1),2:3]
-n <- n-2
+cities_pos <- instancia[1:(n-1),2:3]
+n <- n-1
 ######################################## GENERAR matrix ALEATORIA
-# n <- 75
-# cities_pos <- matrix(runif(2*n), ncol = 2) # Generate coordinates of n neighbors randomly
-# cities_pos <- round(1000*(cities_pos)) # Round to integers
+#n <- 75
+#cities_pos <- matrix(runif(2*n), ncol = 2) # Generate coordinates of n neighbors randomly
+#cities_pos <- round(1000*(cities_pos)) # Round to integers
 #################################################################
 cities_pos <- as.matrix(cities_pos)
 colnames(cities_pos) <- c("V1", "V2")
@@ -175,7 +176,7 @@ for(num_iter in 1:m){
       degree_neighbors_to_go <- degree_neighbors_list[[i]][cities_neighbors_to_go]
       # Se calcula un valor booleano que previene que nos olvidemos de un nodo. Si existe un nodo con pocos
       # vecinos hay que visitarlo inmediatamente, sino, conviene visitar el más proximo.
-      immediate_neighbors <- degree_neighbors_to_go <= greedy
+      immediate_neighbors <- degree_neighbors_to_go <= immediate_value
       if(all(!immediate_neighbors)){
         # En caso de que todos los nodos tengan multiples vecinos calcular el mas proximo
         city_distances <- cities_dist_original[city_current, cities_neighbors_to_go]
@@ -227,23 +228,25 @@ for(i in 1:n){
 }
 ```
 
+
 ```{r}
-exito <- 1 # Indica que se encontró alguna estructura que swapear, se define 1 para que entre al while al menos una vez
-while(exito>0){
-  exito <- 0  # no se han encontrado estructuras swapeables
+success <- 1 # Indica que se encontró alguna estructura que swapear, se define 1 para que entre al while al menos una vez
+while(success>0){
+  success <- 0  # no se han encontrado estructuras swapeables
   structure_list <- list() # se guardan las estructuras swapeables
   structure_index_list <- list()  # se guarda donde inicia la estrucutra
   structure_cost_vector <- c() # se guarda el costo total de cada estructura
   for(len in 3:(n-1)){  # se fija una longitud
     ini <- 1            # comenzando en el primer nodo
     end <- len+1        # hasta el nodo len + 1 se hace lo siguiente 
-    for(path in 1:n){   # para cada longitud existen siempre n paths posibles por revisar
+    for(path in 1:n){   # para cada longitud existen siempre n paths posibles por revisar en el ciclo inicial
       structure <- paths_ext[cycle_index, ini:end] # se guarda la secuencia de ciudades
       structure_cost <- sum(costs_ext[cycle_index, ini:(end-1)]) # el costo de las transiciones
       structure_length <- len + 1 # la longitud del vector que esta dada por len + 1
       extreme1 <- structure[1] # se guardan los extremos, la cabeza
       extreme2 <- tail(structure, 1) # y la cola
-      for(k in setdiff(1:n, cycle_index)){# vamos a buscar esta estructura en cada uno de los posibles caminos
+      current_set <- setdiff(1:n, cycle_index)
+      for(k in current_set){# vamos a buscar esta estructura en cada uno de los posibles caminos
         index_begin <- index_matrix[k,extreme1] # obtenemos el indice donde se visita al extremo 1
         index_end <- index_matrix[k,extreme2] # y el indice donde se visita al extremo 2
         if(index_begin > index_end){ # si los indices estan al reves se intercambian
@@ -259,10 +262,10 @@ while(exito>0){
           if(length(setdiff(structure, structure1))==0){ #y si tienen las mismas ciudades
             structure1_cost <- sum(costs_ext[k, index_begin:(index_end-1)]) # considera el costo
             if(structure1_cost < structure_cost){ # si es mas barato es posible hacer un swap
-              exito <- exito + 1 # considera que llevas un exito
-              structure_list[[exito]] <- structure1 # agregalo a la lista
-              structure_cost_vector[exito] <- structure1_cost - structure_cost # agrega la utilidad 
-              structure_index_list[[exito]] <- c(k, index_begin, index_end) # informacion de donde empieza y donde acaba
+              success <- success + 1 # considera que llevas un success
+              structure_list[[success]] <- structure1 # agregalo a la lista
+              structure_cost_vector[success] <- structure1_cost - structure_cost # agrega la utilidad 
+              structure_index_list[[success]] <- c(k, index_begin, index_end) # informacion de donde empieza y donde acaba
             }
           }
         }
@@ -270,10 +273,10 @@ while(exito>0){
           if(length(setdiff(structure, structure2))==0){
             structure2_cost <- sum(costs_ext[k,index_end:(index_begin+n-1)])
             if(structure2_cost < structure_cost){
-              exito <- exito + 1
-              structure_list[[exito]] <- structure2
-              structure_cost_vector[exito] <- structure2_cost - structure_cost
-              structure_index_list[[exito]] <- c(k, index_end, index_begin+n)
+              success <- success + 1
+              structure_list[[success]] <- structure2
+              structure_cost_vector[success] <- structure2_cost - structure_cost
+              structure_index_list[[success]] <- c(k, index_end, index_begin+n)
             }
           }
         }
@@ -283,8 +286,8 @@ while(exito>0){
       end <- end + 1
     }
   }
-  if(exito>0){
-    index_min <- which.min(structure_cost_vector) # el numero de exito que sera reemplazado
+  if(success>0){
+    index_min <- which.min(structure_cost_vector) # el numero de success que sera reemplazado
     index_replace <- structure_index_list[[index_min]][1] # corresponde al ciclo numero k
     index_begin <- structure_index_list[[index_min]][2] # que comienza en la ciudad index_begin
     index_end <- structure_index_list[[index_min]][3] # termina en la ciudad index_end
@@ -323,7 +326,6 @@ while(exito>0){
       index_end <- index_head-1 # El ultimo indice que no es de la estructura
       paths[cycle_index,] <- c(structure_tail, paths[cycle_index, index_begin:index_end], structure_head)
       costs[cycle_index,] <- c(edges_costs_tail, costs[cycle_index, (index_begin-1):index_end], edges_costs_head)
-      print("Warning: this section of code is prone to error, it was programmed by an idiot")
     }
     for(i in 1:n){
       index_matrix[i,] <- sapply(1:n, function(j) index_function(i,j))
@@ -337,11 +339,16 @@ while(exito>0){
 ```{r}
 path_min_swap <- paths[cycle_index,]
 cost_min_swap <- sum(costs[cycle_index,])
+end_time <- Sys.time()
+```
+
+```{r}
+algorith_time <- end_time - start_time
 ```
 
 ```{r}
 cities_pos_df <- as.data.frame(cities_pos)
-g1 <- TSP_plot(cities_pos_df, path_min_noswap, path_min_noswap) +  ggtitle("Sin Swapping")  + labs (x = cost_min_noswap, y = "")
-g2 <- TSP_plot(cities_pos_df, path_min_swap, path_min_noswap) +  ggtitle("With Swapping")  + labs (x = cost_min_swap, y = "")
+g1 <- TSP_plot(cities_pos_df, path_min_noswap, path_min_noswap) +  ggtitle("Greedy")  + labs (x = cost_min_noswap, y = "")
+g2 <- TSP_plot(cities_pos_df, path_min_swap, path_min_noswap) +  ggtitle("Swapping")  + labs (x = cost_min_swap, y = "")
 grid.arrange (g1, g2, nrow=1)
 ```
