@@ -12,10 +12,16 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r}
 library(tidyverse)
 library(gridExtra)
+library(stringr)
 ```
 
 # Functions
 ```{r}
+# Define extract number from string
+numextract <- function(string){ 
+  str_extract(string, "\\-*\\d+\\.*\\d*")
+} 
+
 # Define Euclidean distance funcion
 dist_euclidean <- function(i, j){
   result <- (i-j)^2 %>% sum() %>% sqrt()
@@ -107,10 +113,11 @@ immediate_value <- 3 # When a node has this number of neighbors then it adds to 
 ```{r}
 start_time <- Sys.time()
 ######################################## LEER ARCHIVO
-instancia <- read_table2("~/Desktop/Tesis_Maestria/tesis_maestria/lin105.tsp", skip = 6, col_names = FALSE)
-n <- nrow(instancia)
-cities_pos <- instancia[1:(n-1),2:3]
-n <- n-1
+name_instance <- "lin105.tsp"
+name_instance <- paste0("~/Desktop/Tesis_Maestria/tesis_maestria/", name_instance)
+n <- numextract(name_instance) %>% as.double()
+instancia <- read_table2(name_instance, skip = 6, col_names = FALSE, n_max = n)
+cities_pos <- instancia[,2:3]
 ######################################## GENERAR matrix ALEATORIA
 #n <- 75
 #cities_pos <- matrix(runif(2*n), ncol = 2) # Generate coordinates of n neighbors randomly
@@ -293,13 +300,13 @@ while(success>0){
     index_end <- structure_index_list[[index_min]][3] # termina en la ciudad index_end
     structure_replace <- structure_list[[index_min]] # la estructura a remplazarse
     costs_replace <- costs_ext[index_replace, index_begin:(index_end-1)]
-    index_head <- index_matrix[cycle_index, structure_replace[1]]
-    index_tail <- index_matrix[cycle_index, tail(structure_replace, 1)]
+    index_head <- index_matrix[cycle_index, structure_replace[1]] # los indices head y tail del ciclo inicial
+    index_tail <- index_matrix[cycle_index, tail(structure_replace, 1)] # que va a reemplazarse
     if(length(index_head:index_tail) == length(structure_replace)){
       # En este caso se puede sustituir la estructura en el camino sin necesidad de cortarlo
       # Puede ser que haya que ponerlo tal y como esta o en reversa
       if(index_head > index_tail){
-        structure_replace <- rev(structure_replace)
+        structure_replace <- rev(structure_replace) 
         costs_replace <- rev(costs_replace)
         aux <- index_head
         index_head <- index_tail
@@ -308,26 +315,25 @@ while(success>0){
       paths[cycle_index, index_head:index_tail] <- structure_replace
       costs[cycle_index, index_head:(index_tail-1)] <- costs_replace
     }
-    else{
-      if(index_head < index_tail){
+    else{ # En este caso es necesario cortar el camino en partes para el reemplazo
+      if(index_head < index_tail){ #nuevamente,pero si head es menor que tail
         structure_replace <- rev(structure_replace)
         costs_replace <- rev(costs_replace)
         aux <- index_head
         index_head <- index_tail
         index_tail <- aux  
       }
-      index_cut <- which(structure_replace == cycle_index)
-      structure_head <- structure_replace[1:index_cut]
-      structure_tail <- structure_replace[-1:-(index_cut-1)]
-      edges_costs <- costs_replace
-      edges_costs_head <- edges_costs[1:(index_cut-1)]
-      edges_costs_tail <- edges_costs[-1:-(index_cut-1)]
+      index_cut <- which(structure_replace == cycle_index) #encuentra donde hay que hacer el corte de la estructura
+      structure_head <- structure_replace[1:index_cut] # se parte en dos, head
+      structure_tail <- structure_replace[-1:-(index_cut-1)] # y tail
+      costs_head <- costs_replace[1:(index_cut-1)]
+      costs_tail <- costs_replace[-1:-(index_cut-1)]
       index_begin <- index_tail + 1 # El primer indice que no es de la estructura
       index_end <- index_head-1 # El ultimo indice que no es de la estructura
-      paths[cycle_index,] <- c(structure_tail, paths[cycle_index, index_begin:index_end], structure_head)
-      costs[cycle_index,] <- c(edges_costs_tail, costs[cycle_index, (index_begin-1):index_end], edges_costs_head)
+      paths[cycle_index,] <- c(structure_tail, paths[cycle_index, index_begin:index_end], structure_head) # se reemplaza el camino
+      costs[cycle_index,] <- c(costs_tail, costs[cycle_index, (index_begin-1):index_end], costs_head) # y el costo
     }
-    for(i in 1:n){
+    for(i in 1:n){ # se actualiza la matriz de indices, de caminos extendidos y de costos
       index_matrix[i,] <- sapply(1:n, function(j) index_function(i,j))
       paths_ext[i,] <-  c(paths[i,], paths[i,2:n])
       costs_ext[i,] <-  c(costs[i,], costs[i,])
