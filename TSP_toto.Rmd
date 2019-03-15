@@ -105,7 +105,7 @@ index_function <- function(i,j){
 # Hyper parameters
 ```{r}
 set.seed(11212)
-proportion_edges <- 1/2 # Each node will only have this proportion of neighbors with respect the n neighbors
+proportion_edges <- 1/3 # Each node will only have this proportion of neighbors with respect the n neighbors
 immediate_value <- 3 # When a node has this number of neighbors then it adds to the path regardless of the cost
 ```
 
@@ -120,6 +120,7 @@ instancia <- read_table2(name_instance, skip = 6, col_names = FALSE, n_max = n)
 cities_pos <- instancia[,2:3]
 ######################################## GENERAR matrix ALEATORIA
 #n <- 75
+#immediate_value <- rep(1:4, ceiling(n/4))[1:n]
 #cities_pos <- matrix(runif(2*n), ncol = 2) # Generate coordinates of n neighbors randomly
 #cities_pos <- round(1000*(cities_pos)) # Round to integers
 #################################################################
@@ -203,12 +204,59 @@ for(num_iter in 1:m){
       # Se actualiza la matriz de costo.
       costs[i, num_iter] <- dist_min
       paths[i, num_iter+1] <- city_min
+      # Se verifica que no haya crossing
+      if(num_iter>2){
+        city21=city_current
+        x21=cities_pos[city21,1]
+        y21=cities_pos[city21,2]
+        city22=city_min
+        x22=cities_pos[city22,1]
+        y22=cities_pos[city22,2]
+        if(x22-x21 != 0){
+          m2 = (y22-y21)/(x22-x21)
+        }
+        else{
+          m2 =(y22-y21)/(x22-x21+10e-5)
+        }
+        b2 = y21-m2*x21
+        for(k in 1:(num_iter-2)){ # ... las restantes aristas
+          city11 <- paths[i,k]
+          x11 <- cities_pos[city11,1]
+          y11 <- cities_pos[city11,2]
+          city12 <- paths[i,k+1]
+          x12 <- cities_pos[city12,1]
+          y12 <- cities_pos[city12,2]
+          if(x12-x11 != 0){
+            m1 <- (y12-y11)/(x12-x11)
+          }
+          else{
+            m1 <- (y12-y11)/(x12-x11+10e-5)
+          }
+          b1 <- y11-m1*x11
+          if(m1 != m2){
+            x_intersect <- -(b2-b1)/(m2-m1)
+            bool1 <- (x11 < x_intersect & x_intersect < x12) | (x12 < x_intersect & x_intersect < x11)
+            bool2 <- (x21 < x_intersect & x_intersect < x22) | (x22 < x_intersect & x_intersect < x21)
+          if(bool1 & bool2){
+            paths[i,(k+1):num_iter] <- rev(paths[i,(k+1):num_iter])
+            dist1_replace <- cities_dist_original[city11,city21]
+            dist2_replace <- cities_dist_original[city12,city22]
+            costs[i,k:num_iter] = c(dist1_replace, rev(costs[i,(k+1):(num_iter-1)]), dist2_replace)
+            city_current <- paths[i, num_iter]
+            city21=city_current
+            x21=cities_pos[city21,1]
+            y21=cities_pos[city21,2]
+          }
+        }
+      }
+    }
   }
 }
 # Se hace el costo de cerrar el ciclo.
 if(m == n-1){
   costs[1:n, n]  <- sapply(1:n, function(i){cities_dist_original[paths[i, n], i]})
 }
+
 # Se calcula el costo de cada ciclo
 costs_cycles <- sapply(1:n, function(i){sum(costs[i,])})
 # Es el indice del mejor ciclo
@@ -238,7 +286,6 @@ for(i in 1:n){
 ```{r}
 success <- 1 # Indica que se encontró alguna estructura que swapear, se define 1 para que entre al while al menos una vez
 while(success>0){
-#for(asasassa in 1:1){
   success <- 0  # no se han encontrado estructuras swapeables
   path_list <- list() # se guardan las estructuras swapeables
   path_index_list <- list()  # se guarda donde inicia la estrucutra
