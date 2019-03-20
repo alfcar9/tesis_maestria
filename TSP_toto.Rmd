@@ -113,7 +113,7 @@ immediate_value <- 3 # When a node has this number of neighbors then it adds to 
 ```{r}
 start_time <- Sys.time()
 ######################################## LEER ARCHIVO
-name_instance <- "lin105.tsp"
+name_instance <- "eil101.tsp"
 name_instance <- paste0("~/Desktop/Tesis_Maestria/tesis_maestria/", name_instance)
 n <- numextract(name_instance) %>% as.double()
 instancia <- read_table2(name_instance, skip = 6, col_names = FALSE, n_max = n)
