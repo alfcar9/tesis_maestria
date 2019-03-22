@@ -6,13 +6,11 @@
 #include <math.h>
 #include "tsp_functions.h" //header in local directory
 
-using namespace N;
-
-double tsp_functions::dist_euclidean(double a[2], double b[2]){
+double tsp_functions::dist_euclidean(double city1[2], double city2[2]){
   double result;
   result = 0.0;
   for(int i=0; i<=1; i++){
-      result += pow(a[i]-b[i], 2);
+      result += pow(city1[i]-city2[i], 2);
   }
   result = sqrt(result);
   return result;
