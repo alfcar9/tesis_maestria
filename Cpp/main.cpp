@@ -7,70 +7,41 @@
 #include <iostream>
 #include <string> // std::string, std::stod
 #include <cassert>
-#include <fstream> // read files
-#include <sstream>
-#include <eigen3/Eigen/Dense> //library for linear algebra
+#include <cmath> // floor function
 #include "tsp_functions.h"
+#include <limits> // define infinity
 
 using namespace std; //shorthand for standard input
-using namespace Eigen; //shorthand for eigen
+
 int main(){
-  int n; //declare size of instance, number of cities
-  double **pmatrix_pos=0; //declare and initialize pointer
-  double **pmatrix_dist=0; //declare and initialize pointer
-  const std::string input = "../Instancias/berlin52.tsp"; // Name of instance file
-  n = tsp_functions::finds_number(input);
+	int n, nneighbors, kth_near; //declare size of instance, number of cities
+	double prop_edges, immediate;
+	double **pmatrix_pos=0; //declare and initialize pointer
+	double **pmatrix_dist_comp=0; //declare and initialize pointer
+	double **pmatrix_dist_trun=0; //declare and initialize pointer
+	const std::string input = "../Instancias/berlin52.tsp"; // Name of instance file
 
-  pmatrix_pos = new double*[n];
-  for(int i=0; i<n; i++){
-      pmatrix_pos[i] = new double[n];
-  }
-  
+	n = tsp_functions::finds_number(input); // Gets instance size  
+	pmatrix_pos = tsp_functions::reads_instance(input, n); // Read and saves input file in matrix
+	pmatrix_dist_comp = tsp_functions::matrix_euclidean(pmatrix_pos, n); // Calculates distance matrix
+	tsp_functions::print_matrix(pmatrix_pos, 3, 2); // prints matrix
+	tsp_functions::print_matrix(pmatrix_dist_comp, 3, 3); // prints matrix
 
-  ifstream in_file(input);
-  //ifstream in_file("example_file.txt");
-  string line;
-  unsigned i = 0;
+	// HYPERPARAMETERS
+	prop_edges = 1/3; // Proportion of neighbors with respect the n-1 neighbors
+	immediate = 3; // Number of neighbors remaining so it adds to path regardless of the cost
 
-  if(!in_file){
-    cout << "File does not exist.";
-    exit(1);
-  }
+	// Copies matrix
+	pmatrix_dist_trun = tsp_functions::copy_matrix(pmatrix_dist_comp, n, n);
 
-  for(int i=0; i<6;i++){
-    getline(in_file, line);
-  }
-  while (getline(in_file, line) && line != "EOF") {
-  stringstream ss;
-  ss << line;
-  string x, y, z;
-  ss >> x >> y >> z;
-  double yd = stod(y);
-  double zd = stod(z);
-  pmatrix_pos[i][0] = yd;
-  pmatrix_pos[i][1] = zd;
-  i++;
-  }
-
-  in_file.close();
-  
-  // Read File
-  
-  pmatrix_dist = tsp_functions::matrix_euclidean(pmatrix_pos, n);
-  //Print Matrix Pos
-  for ( int i = 0; i < 1; i++){
-    for( int j = 0; j < 2; j++){
-      printf("%f, ", pmatrix_pos[i][j] );
-    }
-    printf("\n");
-  }
-  // Print Matrix Dist
-  for ( int i = 0; i < 1; i++){
-    for( int j = 0; j < 1; j++){
-      printf("%f, ", pmatrix_dist[i][j] );
-    }
-    printf("\n");
-  }
-
-  return 0;
+	// Eliminate all but the first kth nearest edges for each node.
+	nneighbors = floor(n*prop_edges); // Number of neighbors we keep
+	for(int i; i<n; i++){
+		kth_near <- 5; //(cities_dist_original[i,] %>% sort())[total_neighbors]
+		for(int j; j<n; j++){
+			if(pmatrix_dist_comp[i][j] > kth_near){
+				pmatrix_dist_trun[i][j] = numeric_limits<double>::infinity();
+			}
+		}
+	}
 }

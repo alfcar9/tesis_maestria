@@ -6,6 +6,11 @@
 #include <math.h>
 #include "tsp_functions.h" //header in local directory
 #include <regex> // Regular Expresions
+#include <string> // std::string, std::stod
+#include <fstream> // read files
+#include <sstream>
+
+using namespace std; //shorthand for standard input
 
 double tsp_functions::dist_euclidean(double *pcity1, double *pcity2){
   double result;
@@ -118,6 +123,66 @@ int tsp_functions::finds_number(const std::string& input){
 
   
 // Reads instance of TSPLIB
-// double **reads_instance(string s, int n){
+double **tsp_functions::reads_instance(const std::string &input, int n){
+	double **pmatrix_pos=0;
 
-// }
+	//declare and initiate matrix of coordintate positions
+	pmatrix_pos = new double*[n];
+  	for(int i=0; i<n; i++){
+      pmatrix_pos[i] = new double[2];
+  	}
+
+  	// reads input file
+	ifstream in_file(input);
+	string line;
+
+	// exits if file does not exists
+	if(!in_file){
+	cout << "File does not exist.";
+	exit(1);
+	}
+
+	// skips the first 6 lines
+	for(int i=0; i<6;i++){
+	getline(in_file, line);
+	}
+
+	unsigned i = 0;
+	while (getline(in_file, line) && line != "EOF") {
+	stringstream ss;
+	ss << line;
+	string x, y, z;
+	ss >> x >> y >> z;
+	double yd = stod(y);
+	double zd = stod(z);
+	pmatrix_pos[i][0] = yd;
+	pmatrix_pos[i][1] = zd;
+	i++;
+	}
+	in_file.close();
+	return pmatrix_pos;
+}
+
+void tsp_functions::print_matrix(double **pmatrix, int m, int n){
+	for ( int i = 0; i < m; i++){
+		for( int j = 0; j < n; j++){
+		 	printf("%f, ", pmatrix[i][j] );
+		}
+		printf("\n");
+	}
+}
+
+double **tsp_functions::copy_matrix(double **pmatrix, int m, int n){
+	double **pmatrix_copy=0;
+	pmatrix_copy = new double*[m];
+	for(int i=0; i<m; i++){
+      pmatrix_copy[i] = new double[n];
+  	}
+
+	for ( int i = 0; i < m; i++){
+		for( int j = 0; j < n; j++){
+		 	pmatrix_copy[i][j] = pmatrix[i][j];
+		}
+	}
+	return pmatrix_copy;
+}
