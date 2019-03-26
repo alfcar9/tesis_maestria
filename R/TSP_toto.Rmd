@@ -67,7 +67,7 @@ desigualdad_triangulo <- function(cities_dist)
       for(k in set){
         distancia_indirecta <- cities_dist[i,k] + cities_dist[k,j]
         if(distancia_indirecta < distancia_minima){
-          distancia_minima <- distancia_minima
+          distancia_minima <- distancia_indirecta
         }
       }
       cities_dist[i,j] <- distancia_minima
@@ -113,8 +113,8 @@ immediate_value <- 3 # When a node has this number of neighbors then it adds to 
 ```{r}
 start_time <- Sys.time()
 ######################################## LEER ARCHIVO
-name_instance <- "eil101.tsp"
-name_instance <- paste0("~/Desktop/Tesis_Maestria/tesis_maestria/", name_instance)
+name_instance <- "a280.tsp"
+name_instance <- paste0("~/Desktop/Tesis_Maestria/tesis_maestria/Instancias/", name_instance)
 n <- numextract(name_instance) %>% as.double()
 instancia <- read_table2(name_instance, skip = 6, col_names = FALSE, n_max = n)
 cities_pos <- instancia[,2:3]
@@ -360,7 +360,7 @@ while(success>0){
       extreme1 <- path[1] # se guardan los extremos, la cabeza
       extreme2 <- tail(path, 1) # y la cola
       current_set <- setdiff(1:n, cycle_index)
-      for(k in current_set){# vamos a buscar esta estructura en cada uno de los n-1 caminos generados
+      for(k in current_set){# vamos a buscar este camino en cada uno de los n-1 caminos generados
         index_begin <- index_matrix[k, extreme1] # obtenemos el indice donde se visita al extremo 1
         index_end <- index_matrix[k, extreme2] # y el indice donde se visita al extremo 2
         if(index_begin > index_end){ # si los indices estan al reves se intercambian
@@ -375,8 +375,7 @@ while(success>0){
         if(path_len==path1_len && length(setdiff(path, path1))==0){ # si tienen longitudes iguales y tienen las mismas ciudades
           path1_cost <- sum(costs_ext[k, index_begin:(index_end-1)]) # considera el costo
           if(path1_cost < path_cost){ # entonces si es mas barato es posible hacer un swap
-            if(length(path_list)>0){
-              #not_in_list <- !any(sapply(1:success, function(i) length(path_list[[i]])==path1_len && all(path_list[[i]]==path1)))
+            if(length(path_list)>0){ # evitamos ser redundantes en los caminos reemplazados
               not_in_list <- !any(sapply(1:success, function(i) length(setdiff(path_list[[i]], path1))==0 || length(setdiff(path1, path_list[[i]])) == 0))
             }
             else{
@@ -394,7 +393,6 @@ while(success>0){
           path2_cost <- sum(costs_ext[k,index_end:(index_begin+n-1)])
           if(path2_cost < path_cost){
             if(length(path_list)>0){
-              #not_in_list <- !any(sapply(1:success, function(i) length(path_list[[i]])==path2_len && all(path_list[[i]]==path2)))
               not_in_list <- !any(sapply(1:success, function(i) length(setdiff(path_list[[i]], path2))==0 || length(setdiff(path2, path_list[[i]])) == 0))
             }
             else{
@@ -405,10 +403,10 @@ while(success>0){
               path_list[[success]] <- path2
               path_cost_vector[success] <- path2_cost - path_cost
               path_index_list[[success]] <- c(k, index_end, index_begin+n)
-            }
-          }
-        }
-      }
+            } # termina if not_in_list
+          } # termina if que el costo es menor
+        } # termina if de que se contienen las mismas ciudades 
+      } # termina for de busqueda de ese camino especifico
       # se incrementan el incio y fin y se revisan asi los n posibles caminos
       ini <- ini + 1
       end <- end + 1
@@ -422,9 +420,9 @@ while(success>0){
     for(k in 1:success){
       index <- which.min(path_cost_vector_aux)
       path_cand <- path_list[[index]]
-      if( m>0 ){
-        k <- sum(sapply(1:m, function(i) length(intersect(path_list_refined[[m]], path_cand)))) # paths ajenos
-        if(k==0){
+      if(m > 0){
+        k1 <- sum(sapply(1:m, function(i) length(intersect(path_list_refined[[i]], path_cand)))) # paths ajenos
+        if(k1==0){
           m <-  m+1
           path_list_refined[[m]] <- path_cand
           path_index_vector_refined[m] <- index
@@ -435,7 +433,7 @@ while(success>0){
         path_list_refined[[m]] <- path_cand
         path_index_vector_refined[m] <- index
       }
-        path_cost_vector_aux <-  path_cost_vector_aux[-index]
+      path_cost_vector_aux <-  path_cost_vector_aux[-index]
     }
     for(k in 1:m){
       index_min <- path_index_vector_refined[k] # el numero de success que sera reemplazado
