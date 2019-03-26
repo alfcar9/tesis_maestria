@@ -10,8 +10,8 @@
 #include <fstream> // read files
 #include <sstream>
 #include <bits/stdc++.h> // sort method
-using namespace std; //shorthand for standard input
 #include <vector> // neighbors list changes size in runtime
+using namespace std; //shorthand for standard input
 
 double tsp_functions::dist_euclidean(double *pcity1, double *pcity2){
   double result;
@@ -24,15 +24,16 @@ double tsp_functions::dist_euclidean(double *pcity1, double *pcity2){
 }
 
 // Given set of coordiantes calculates euclidean distance matrix.
-double **tsp_functions::dist_matrix(double **ppos, int n){
+void tsp_functions::dist_matrix(double **ppos, double ***pdist_complete, int n){
 	double *pcity1_pos=0;
 	double *pcity2_pos=0;
-	double **pdist=0;
 	pcity1_pos = new double[2];
-	pcity2_pos = new double[2]; 
-	pdist = new double*[n];
+	pcity2_pos = new double[2];
+
+	double **pmatrix=0; 
+	pmatrix = new double*[n];
 	for(int i=0; i<n; i++){
-	    pdist[i] = new double[n];
+	    pmatrix[i] = new double[n];
 	}
 	for(int i=0; i<(n-1); i++){
 		pcity1_pos = &ppos[i][0];
@@ -40,11 +41,11 @@ double **tsp_functions::dist_matrix(double **ppos, int n){
 			for(int k=0; k<2;k++){
 			pcity2_pos = &ppos[j][0];
 		}
-			pdist[i][j] = dist_euclidean(pcity1_pos, pcity2_pos);
-			pdist[j][i] = pdist[i][j]; 
+			pmatrix[i][j] = dist_euclidean(pcity1_pos, pcity2_pos);
+			pmatrix[j][i] = pmatrix[i][j]; 
 		}
 	}
-	return pdist;
+	*pdist_complete = pmatrix;
 }
 
 // Makes a matrix symemetric
@@ -123,12 +124,12 @@ int tsp_functions::finds_number(const std::string& input){
 
   
 // Reads instance of TSPLIB
-double **tsp_functions::reads_instance(const std::string &input, int n){
+void tsp_functions::reads_instance(const std::string &input, double ***ppos, int n){
 	//declare and initiate matrix of coordintate positions
-	double **ppos=0;
-	ppos = new double*[n];
+
+	double **pmatrix = new double*[n]; 
   	for(int i=0; i<n; i++){
-      ppos[i] = new double[2];
+      pmatrix[i] = new double[2];
   	}
 
   	// reads input file
@@ -154,12 +155,12 @@ double **tsp_functions::reads_instance(const std::string &input, int n){
 	ss >> x >> y >> z;
 	double yd = stod(y);
 	double zd = stod(z);
-	ppos[i][0] = yd;
-	ppos[i][1] = zd;
+	pmatrix[i][0] = yd;
+	pmatrix[i][1] = zd;
 	i++;
 	}
 	in_file.close();
-	return ppos;
+	*ppos = pmatrix;
 }
 
 void tsp_functions::print_matrix(double **pmatrix, int m, int n){
@@ -181,24 +182,24 @@ void tsp_functions::print_matrix(int **pmatrix, int m, int n){
 }
 
 // Makes a copy of a matrix and prunes it with infitiny values
-double **tsp_functions::prune_matrix(double **pdist_complete, int n, double prop_edges){
+void tsp_functions::prune_matrix(double **pdist_complete, double ***pdist_prune, int n, double prop_edges){
 	int nneighbors;
-	double kth_near;
+	double kth_near, diff;
 	// Declare and initiate vector
 	double *prow_dist_complete=0;
 	prow_dist_complete = new double[n];
 
 	// Declare and initiate row
-	double **pdist_prune=0;
-	pdist_prune = new double*[n];
+	double **pmatrix=0;
+	pmatrix = new double*[n];
 	for(int i=0; i<n; i++){
-      pdist_prune[i] = new double[n];
+      pmatrix[i] = new double[n];
   	}
 
   	// Copies Matrix
 	for (int i = 0; i < n; i++){
 		for(int j = 0; j < n; j++){
-		 	pdist_prune[i][j] = pdist_complete[i][j];
+		 	pmatrix[i][j] = pdist_complete[i][j];
 		}
 	}
 
@@ -212,53 +213,63 @@ double **tsp_functions::prune_matrix(double **pdist_complete, int n, double prop
 		kth_near = prow_dist_complete[nneighbors];
 		
 		for(int j=0; j<n; j++){
-			if(pdist_complete[i][j] > kth_near){
-				pdist_prune[i][j] = numeric_limits<double>::infinity();
+			diff = pdist_complete[i][j] - kth_near; 
+			if(diff > -numeric_limits<double>::epsilon()){
+				pmatrix[i][j] = numeric_limits<double>::infinity();
 			}
 		}
 	}
-	return pdist_prune;
+	*pdist_prune = pmatrix;
 }
 
-int **tsp_functions::initiate_paths(int n){
-	int **ppaths=0;
-	ppaths = new int*[n];
+void tsp_functions::initiate_paths(int ***ppaths, int n){
+	int **pmatrix=0;
+	pmatrix = new int*[n];
 	for(int i=0; i<n; i++){
-      ppaths[i] = new int[n+1];
+      pmatrix[i] = new int[n+1];
       for(int j=0; j<n; j++){
-      	ppaths[i][j] = 0;
+      	pmatrix[i][j] = 0;
       }
-      ppaths[i][0] = i+1;
-      ppaths[i][n] = i+1;
+      pmatrix[i][0] = i+1;
+      pmatrix[i][n] = i+1;
   	}
-  	return ppaths;
+  	*ppaths = pmatrix;
 }
 
-double **tsp_functions::initiate_costs(int n){
-	double **pcosts=0;
-	pcosts = new double*[n];
+void tsp_functions::initiate_costs(double ***pcosts, int n){
+	double **pmatrix=0;
+	pmatrix = new double*[n];
 	for(int i=0; i<n; i++){
-      pcosts[i] = new double[n];
+      pmatrix[i] = new double[n];
       for(int j=0; j<n; j++){
-      	pcosts[i][j] = 0;
+      	pmatrix[i][j] = 0;
       }
   	}
-  	return pcosts;
+  	*pcosts = pmatrix;
 }
 
-// int **tsp_functions::initiate_neighborslist(double **pdist_prune, int n){
-// 	vector<int> pneighbors_list[n];
-// 	int number_neighbors;
-// 	for(int i=0; i<n; i++){
-// 		number_neighbors =0;
-// 		for (int j = 0; j < n; ++j)
-// 		{
-// 			if (pdist_prune[i][j] < numeric_limits<double>::infinity() && pdist_prune[i][j] > 0)
-// 			{
-// 				number_neighbors++;
-// 			}
-// 		}
-// 	}
-// 	return pneighbors_list;
-// }
+void tsp_functions::initiate_neighborslist(double **pdist_prune, int **degree_neighbors, vector<int> ***pneighbors_list, int n){
+	vector<int> **pneighbors_list_aux = new vector<int>*[n]; // Create neighbors list
+	for(int i = 0;	i<n; i++){
+		pneighbors_list_aux[i] = new vector<int>;
+	}
+	
+	int *pdegree_neighbors_aux=0;
+	pdegree_neighbors_aux = new int[n];
 
+	int nneighbors;
+	for(int i=0; i<n; i++){
+		nneighbors = 0;
+		for (int j = 0; j < n; ++j)
+		{
+			if (pdist_prune[i][j] < numeric_limits<double>::infinity() && pdist_prune[i][j] > numeric_limits<double>::epsilon())
+			{
+				pneighbors_list_aux[i] -> insert(pneighbors_list_aux[i] -> end(), j+1);
+				nneighbors++;
+			}
+			pdegree_neighbors_aux[i] = nneighbors;
+		}
+	}
+	*degree_neighbors = pdegree_neighbors_aux;
+	*pneighbors_list = pneighbors_list_aux;
+}
