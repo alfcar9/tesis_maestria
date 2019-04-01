@@ -113,7 +113,7 @@ immediate_value <- 3 # When a node has this number of neighbors then it adds to 
 ```{r}
 start_time <- Sys.time()
 ######################################## LEER ARCHIVO
-name_instance <- "a280.tsp"
+name_instance <- "lin105.tsp"
 name_instance <- paste0("~/Desktop/Tesis_Maestria/tesis_maestria/Instancias/", name_instance)
 n <- numextract(name_instance) %>% as.double()
 instancia <- read_table2(name_instance, skip = 6, col_names = FALSE, n_max = n)
@@ -220,7 +220,6 @@ for(num_iter in 1:m){
       }
       b2 = y21-m2*x21
       for(k in (num_iter-2):1){ # ... las restantes aristas
-      #for(k in 1:(num_iter-2)){ # ... las restantes aristas
         city11 <- paths[i,k]
         x11 <- cities_pos[city11,1]
         y11 <- cities_pos[city11,2]
@@ -485,6 +484,7 @@ while(success>0){
 }
 ```
 
+
 ```{r}
 path_min_swap <- paths[cycle_index,]
 cost_min_swap <- sum(costs[cycle_index,])
@@ -497,7 +497,7 @@ algorith_time <- end_time - start_time
 
 ```{r}
 cities_pos_df <- as.data.frame(cities_pos)
-g1 <- TSP_plot(cities_pos_df, path_min_noswap, path_min_noswap) +  ggtitle("Greedy")  + labs (x = cost_min_noswap, y = "")
+g1 <- TSP_plot(cities_pos_df, paths[1,], paths[1,]) +  ggtitle("Greedy")  + labs (x = cost_min_noswap, y = "")
 g2 <- TSP_plot(cities_pos_df, path_min_swap, path_min_noswap) +  ggtitle("Swapping")  + labs (x = cost_min_swap, y = "")
 grid.arrange (g1, g2, nrow=1)
 ```
