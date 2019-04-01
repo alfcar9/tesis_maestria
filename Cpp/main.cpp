@@ -64,28 +64,15 @@ int main(){
 	// 	}
 	// 	printf("\n");
 	// }
-
-	// for (auto j = ppaths[0]; j != ppaths[0] + num_iter; ++j) 
-	// {
-	// 	cout << *j << " ";
-	// }
-	// printf("\n");
- //    printf("A estas ciudades se puede ir en la iteracion %u \n", num_iter);
- //    for (auto j = city_neighbors_to_go.begin(); j !=  city_neighbors_to_go.end(); ++j)
- //    {
- //    	printf("%u, ", *j);
- //    }
- //    printf("\n");
-	// printf("%u\n", city_current);
-
-	unsigned city_current, number_neighbors, city_min, dist_min_index, candidate_city, candidate_city_degree, *candidate_city_ptr;
-	double dist_min;
-	bool immediate_value_bool;
-	vector<unsigned> city_neighbors_to_go, degree_neighbors_to_go;
-	vector<double> city_distances;
+	unsigned city_current, number_neighbors, city_min, dist_min_index, candidate_city, candidate_city_degree,
+	 *candidate_city_ptr, city11, city12, city21, city22;
+	double dist_min , b1, b2, m1, m2, x11, x12, x21, x22, y11, y12, y21, y22, x_intersect, dist1_replace, dist2_replace;
+	bool immediate_value_bool, bool1, bool2;
+	vector<unsigned> city_neighbors_to_go, degree_neighbors_to_go, paths_replace;
+	vector<double> city_distances, costs_replace;
 	std::vector<bool> immediate_neighbors;
-	for(unsigned num_iter = 1; num_iter < n; num_iter++){
-		for(unsigned i=0; i < 1; ++i){
+	for(unsigned num_iter = 1; num_iter < n; ++num_iter){
+		for(unsigned i = 0; i < n; ++i){
 		    city_current = ppaths[i][num_iter-1];
 	 	    number_neighbors = 0;
 		    // Se encuentran las ciudades vecinas que no se han visitado así como su respectivo grado
@@ -93,37 +80,38 @@ int main(){
 	 	    degree_neighbors_to_go.clear();
 	 	    city_distances.clear();
 	 	    immediate_neighbors.clear();
-
-	 	    for(unsigned j = 0; j < pneighbors_list[city_current-1] -> size(); j++){ // Sobre cada posible vecino de current_city
+	 	    paths_replace.clear();
+	 	    costs_replace.clear();
+	 	    for(unsigned j = 0; j < pneighbors_list[city_current-1] -> size(); ++j){ // Sobre cada posible vecino de current_city
  	    		candidate_city = *(pneighbors_list[city_current-1] -> begin() + j );
- 	    		candidate_city_ptr = find(ppaths[i], ppaths[i] + num_iter -1, candidate_city);
- 	    		if( candidate_city_ptr == ppaths[i] + num_iter -1) {
+ 	    		candidate_city_ptr = find(ppaths[i], ppaths[i] + num_iter, candidate_city);
+ 	    		if( candidate_city_ptr == ppaths[i] + num_iter) { // no se ha visitado tal ciudad
  	    			city_neighbors_to_go.push_back(candidate_city);
- 	    			candidate_city_degree = *(pdegree_neighbors_list[i] + j );
+ 	    			candidate_city_degree = *(pdegree_neighbors_list[i] + candidate_city- 1 );
  	    			degree_neighbors_to_go.push_back(candidate_city_degree);
  	    			immediate_neighbors.push_back(candidate_city_degree <= immediate_value);
- 	    			number_neighbors++;
+ 	    			++number_neighbors;
  	    		}
 	 	    }
+
 			// Si no hay ciudades vecinas entonces se hace el calculo sobre todas las posibles ciudades
 			if(number_neighbors == 0){
-				 for (unsigned j = 0; j < n; j++){
-				 	for(unsigned k = 0; k < num_iter; k++){
+				 for (unsigned j = 0; j < n; ++j){
+				 	for(unsigned k = 0; k < num_iter; ++k){
 					 	if( j+1 != ppaths[i][k]){
 							city_neighbors_to_go.push_back(j+1);
-							number_neighbors++;
+							candidate_city_degree = *(pdegree_neighbors_list[i] + j );
+							degree_neighbors_to_go.push_back(candidate_city_degree);							
 						}
 					}
 				 } 
 			}
 
-	 		//printf("%u\n", number_neighbors);	
 	 	    // Se guardan en un vector solo los grados de los correspondientes nodos por visitar.
 	 	    // Se calcula un valor booleano que previene que nos olvidemos de un nodo. Si existe un nodo con pocos
 		    // vecinos hay que visitarlo inmediatamente, sino, conviene visitar el más proximo.
 
 	 		immediate_value_bool = std::none_of(immediate_neighbors.begin(), immediate_neighbors.end(), [](bool value) { return value; });
-			
 		    if(immediate_value_bool){
 		  	 	// En caso de que todos los nodos tengan multiples vecinos calcular el mas proximo
 	 	     	for (auto j = city_neighbors_to_go.begin(); j != city_neighbors_to_go.end(); ++j){
@@ -134,21 +122,15 @@ int main(){
 	 	 	else{
 	 	    	// En caso de que haya que visitar uno inmediatamente entonces añadirlo
 	 	    	dist_min_index = std::min_element(degree_neighbors_to_go.begin(), degree_neighbors_to_go.end()) - degree_neighbors_to_go.begin();
-	 	    	}
-	 	    // for(auto j = city_neighbors_to_go.begin(); j != city_neighbors_to_go.end(); j++){
-	 	    // 	printf("%u ", *j);
-	 	    // }
-	 	    // printf("\n");
-	 	    // for(auto j = city_distances.begin(); j != city_distances.end(); j++){
-	 	    // 	printf("%f ", *j);
-	 	    // }	
+	 	    }
+
 	 	    city_min = city_neighbors_to_go[dist_min_index];
-	 	    dist_min = city_distances[dist_min_index];
+	 	    dist_min = city_distances[dist_min_index];		 	
 	 	    
 	 	    // Todos los vecinos que tengan asociado a la ciudad que se visita se les resta un grado
 		    if(number_neighbors != 0){
-		    	for(auto j = city_neighbors_to_go.begin(); j != city_neighbors_to_go.end(); j++){
-		    		*(pdegree_neighbors_list[i] + *j) = *(pdegree_neighbors_list[i] + *j) -1;
+		    	for(auto j = city_neighbors_to_go.begin(); j != city_neighbors_to_go.end(); ++j){
+		    		*(pdegree_neighbors_list[i] + *j -1) = *(pdegree_neighbors_list[i] + *j -1) -1;
 		    	}
 		    }		    
 		    // Se actualiza el grado de la ciudad actual a 0.
@@ -156,59 +138,72 @@ int main(){
 		    // Se actualiza la matriz de costo.
 		    pcosts[i][num_iter-1] = dist_min;
 		    ppaths[i][num_iter] = city_min;
-		    // // Se verifica que no haya crossing
-		    // if(num_iter>2){
-			   //  city21=city_current
-			   //  x21=city_pos[city21,1]
-			   //  y21=city_pos[city21,2]
-			   //  city22=city_min
-			   //  x22=city_pos[city22,1]
-			   //  y22=city_pos[city22,2]
-			   //  if(x22-x21 != 0){
-			   //  	m2 = (y22-y21)/(x22-x21)
-			   //  }
-		    // 	else{
-		    // 		m2 =(y22-y21)/(x22-x21+10e-5)
-		    //   	}
-		    //   	b2 = y21-m2*x21
-		    //   	for(k in (num_iter-2):1){ // ... las restantes aristas
-			   //      city11 = paths[i,k]
-			   //      x11 = city_pos[city11,1]
-			   //      y11 = city_pos[city11,2]
-			   //      city12 = paths[i,k+1]
-			   //      x12 = city_pos[city12,1]
-			   //      y12 = city_pos[city12,2]
-			   //      if(x12-x11 != 0){
-			   //        m1 = (y12-y11)/(x12-x11)
-			   //      }
-		    //     	else{
-		    //       		m1 = (y12-y11)/(x12-x11+10e-5)
-		    //     	}
-		    //     	b1 = y11-m1*x11
-		    //     	if(m1 != m2){
-		    //       		x_intersect = -(b2-b1)/(m2-m1)
-		    //       		bool1 = (x11 < x_intersect & x_intersect < x12) | (x12 < x_intersect & x_intersect < x11)
-		    //       		bool2 = (x21 < x_intersect & x_intersect < x22) | (x22 < x_intersect & x_intersect < x21)
-			   //      	if(bool1 & bool2){ // condition for finding crossing
-				  //           replace_crossing = rev(paths[i,(k+1):num_iter])
-				  //           paths[i,(k+1):num_iter] = replace_crossing
-				  //           dist1_replace = city_dist_original[city11,city21]
-				  //           dist2_replace = city_dist_original[city12,city22]
-				  //           costs[i,k:num_iter] = c(dist1_replace, rev(costs[i,(k+1):(num_iter-1)]), dist2_replace)
-				  //           city_current = paths[i, num_iter]
-				  //           city21=city_current
-				  //           x21=city_pos[city21,1]
-				  //           y21=city_pos[city21,2]
-			   //     		} // end of if crossing exist
-		    //    		} // end of if slopes are different
-		    // 	} // end of for possible crossing
-		    // } //end of if iter > 2
+		    // Se verifica que no haya crossing
+		    if( num_iter > 2){
+			    city21 = city_current;
+			    x21 = ppos[city21 - 1][0];
+			    y21 = ppos[city21 - 1][1];
+			    city22 = city_min;
+			    x22 = ppos[city22 - 1][0];
+			    y22 = ppos[city22 - 1][1];
+			    if(x22-x21 != 0){
+			    	m2 = (y22 - y21)/(x22-x21);
+			    }
+		    	else{
+		    		m2 =(y22-y21)/(x22 - x21 + 10e-5);
+		      	}
+		       	b2 = y21 - m2 * x21;
+		       	for(auto j = num_iter-2; j > 0; --j){ // ... las restantes aristas
+			        city11 = ppaths[i][j-1];
+			        x11 = ppos[city11 - 1][0];
+			        y11 = ppos[city11 - 1][1];
+			        city12 = ppaths[i][j];
+			        x12 = ppos[city12 -1][0];
+			        y12 = ppos[city12 -1][1];
+			        if(x12 - x11 != 0){
+			          m1 = (y12 - y11)/(x12 - x11);
+			        }
+		        	else{
+		          		m1 = (y12 - y11)/(x12 - x11 + 10e-5);
+		        	}
+		         	b1 = y11 - m1 * x11;
+		         	if(m1 != m2){
+		     	  		x_intersect = -(b2 - b1)/(m2 - m1);
+		           		bool1 = (x11 < x_intersect && x_intersect < x12) || (x12 < x_intersect && x_intersect < x11);
+		           		bool2 = (x21 < x_intersect && x_intersect < x22) || (x22 < x_intersect && x_intersect < x21);
+			         	if(bool1 & bool2){ // condition for finding crossing
+			         		for(unsigned k = j; k < num_iter; ++k){ //rev(paths[i,(j+1):num_iter])
+			         			paths_replace.push_back(ppaths[i][k]);  
+			         		}
+			         		for(unsigned k = j; k < num_iter; ++k){ //rev(paths[i,(j+1):num_iter])
+			         			ppaths[i][k] = paths_replace[num_iter -k];  
+			         		}
+							dist1_replace = pdist_complete[city11 - 1][city21 - 1];
+				        	dist2_replace = pdist_complete[city12 - 1][city22 - 1];
+				        	costs_replace.push_back(dist1_replace);
+				        	for(unsigned k = j+1; k < num_iter; k++){
+			         			costs_replace.push_back(pcosts[i][k]);  
+			         		}
+			         		costs_replace.push_back(dist2_replace);
+			         		for(unsigned k = j; k < num_iter; k++){
+			         			pcosts[i][k] = costs_replace[k];  
+			         		}
+				            city_current = ppaths[i][num_iter -1];
+				            city21 = city_current;
+				            x21 = ppos[city21 -1][0];
+				   		    y21 = ppos[city21 -1][1];
+			       		} // end of if crossing exist
+		       		} // end of if slopes are different
+		    	} // end of for possible crossing
+		    } //end of if iter > 2
   		} // end of construction of path i
 	} // end of iterations
-
-	printf("\n");
-	tsp_functions::print_matrix(pcosts, 1, n);
+	//tsp_functions::print_matrix(pcosts, 1, n);
 	tsp_functions::print_matrix(ppaths, 1, n+1);
-	
+
+	vector<int> hola;
+	for(int i = 0; i < 5; ++i){
+		hola.push_back(i);
+	}
 
 }
