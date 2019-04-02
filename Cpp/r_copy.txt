@@ -51,7 +51,7 @@ for(num_iter in 1:m){
       }
       b2 = y21-m2*x21
       for(k in (num_iter-2):1){ # ... las restantes aristas
-      #for(k in 1:(num_iter-2)){ # ... las restantes aristas
+      #for(j in 1:(num_iter-2)){ # ... las restantes aristas
         city11 <- paths[i,k]
         x11 <- cities_pos[city11,1]
         y11 <- cities_pos[city11,2]
@@ -70,7 +70,7 @@ for(num_iter in 1:m){
           bool1 <- (x11 < x_intersect & x_intersect < x12) | (x12 < x_intersect & x_intersect < x11)
           bool2 <- (x21 < x_intersect & x_intersect < x22) | (x22 < x_intersect & x_intersect < x21)
           if(bool1 & bool2){ # condition for finding crossing
-            replace_crossing <- rev(paths[i,(k+1):num_iter])
+            replace_crossing <- rev(paths[i,(j+1):num_iter])
             paths[i,(k+1):num_iter] <- replace_crossing
             dist1_replace <- cities_dist_original[city11,city21]
             dist2_replace <- cities_dist_original[city12,city22]

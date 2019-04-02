@@ -10,7 +10,7 @@ public:
 	// Given set of coordiantes calculates euclidean distance matrix.
 	static void dist_matrix(double **ppos, double ***pdist_complete, unsigned n);
 	// Assures the distance matrix symemetric
-	static void symmetric_matrix(double **pdist, unsigned n);
+	static void symmetric_matrix(double ***pdist, unsigned n);
 	// Updates distance matrix when triangle Inequality is not satissfied
 	static double **triangle_inequality(double **pdist, unsigned n);
 	// Returns the index of thee jth ctiy in the ith path 
@@ -30,5 +30,12 @@ public:
 	// Initiates costs matrix
 	static void initiate_costs(double ***pcosts, unsigned n);
 	// Initates neighbors list
-	static void initiate_neighborslist(double **pdist_prune, unsigned **pdegree_neighbors, vector<unsigned> ***pneighbors_list, unsigned ***pdegree_neighbors_list, unsigned n);
+	static void initiate_neighborslist(double **pdist_prune, unsigned **pdegree_neighbors, 
+		vector<unsigned> ***pneighbors_list, unsigned ***pdegree_neighbors_list, unsigned n);
+	
+	static int greedy_paths(unsigned immediate_value, unsigned n, double **ppos, unsigned ***ppaths, double ***pcosts, double **pdist_complete,
+		unsigned *pdegree_neighbors, vector<unsigned> **pneighbors_list, unsigned ***pdegree_neighbors_list);
+
+	static void crossing_procedure(unsigned city_current, unsigned city_min, unsigned num_iter, 
+		unsigned i, double **ppos, unsigned ***ppaths, double ***pcosts, double **pdist_complete);
 };

@@ -49,19 +49,19 @@ void tsp_functions::dist_matrix(double **ppos, double ***pdist_complete, unsigne
 }
 
 // Makes a matrix symemetric
-void tsp_functions::symmetric_matrix(double **pdist, unsigned n){
-  for(unsigned i = 0; i<n-1; i++){
-    for(unsigned j = i+1; j<n; j++){
-        if(pdist[i][j] != pdist[j][i]){
-          if(pdist[i][j] < pdist[j][i]){
-            pdist[j][i] = pdist[i][j];
-          }
-          else{
-            pdist[i][j] = pdist[j][i];
-          }
-        }
-     }
-  }
+void tsp_functions::symmetric_matrix(double ***pdist, unsigned n){
+	for(unsigned i = 0; i < n-1; ++i){
+		for(unsigned j = i+1; j < n; ++j){
+    		if( (*pdist)[i][j] != (*pdist)[j][i] ){
+    		    if( (*pdist)[i][j] < (*pdist)[j][i] ){
+            		(*pdist)[j][i] = (*pdist)[i][j];
+         		}
+         		else{
+            		(*pdist)[i][j] = (*pdist)[j][i];
+   			    }
+			}
+		}
+	}
 }
 
 // Returns the index of thee jth ctiy in the ith path 
@@ -256,4 +256,153 @@ void tsp_functions::initiate_neighborslist(double **pdist_prune, unsigned **pdeg
 	*pdegree_neighbors = pdegree_neighbors_aux;
 	*pdegree_neighbors_list = pdegree_neighbors_list_aux; 
 	*pneighbors_list = pneighbors_list_aux;
+}
+
+int tsp_functions::greedy_paths(unsigned immediate_value, unsigned n, double **ppos, unsigned ***ppaths, double ***pcosts, double **pdist_complete,
+ unsigned *pdegree_neighbors, vector<unsigned> **pneighbors_list, unsigned ***ppdegree_neighbors_list){
+	unsigned city_current, number_neighbors, city_min, dist_min_index, candidate_city, candidate_city_degree, *candidate_city_ptr;
+	double dist_min;
+	bool immediate_value_bool;
+	vector<unsigned> city_neighbors_to_go, degree_neighbors_to_go;
+	vector<double> city_distances;
+	std::vector<bool> immediate_neighbors;
+	for(unsigned num_iter = 1; num_iter < n; ++num_iter){
+		for(unsigned i = 0; i < n; ++i){
+		    city_current = (*ppaths)[i][num_iter-1];
+	 	    number_neighbors = 0;
+		    // Se encuentran las ciudades vecinas que no se han visitado así como su respectivo grado
+	 	    city_neighbors_to_go.clear();
+	 	    degree_neighbors_to_go.clear();
+	 	    city_distances.clear();
+	 	    immediate_neighbors.clear();
+	 	    for(unsigned j = 0; j < pneighbors_list[city_current-1] -> size(); ++j){ // Sobre cada posible vecino de current_city
+ 	    		candidate_city = *(pneighbors_list[city_current-1] -> begin() + j );
+ 	    		candidate_city_ptr = find((*ppaths)[i], (*ppaths)[i] + num_iter, candidate_city);
+ 	    		if( candidate_city_ptr == (*ppaths)[i] + num_iter) { // no se ha visitado tal ciudad
+ 	    			city_neighbors_to_go.push_back(candidate_city);
+ 	    			candidate_city_degree = *((*ppdegree_neighbors_list)[i] + candidate_city- 1 );
+ 	    			degree_neighbors_to_go.push_back(candidate_city_degree);
+ 	    			immediate_neighbors.push_back(candidate_city_degree <= immediate_value);
+ 	    			++number_neighbors;
+ 	    		}
+	 	    }
+
+			// Si no hay ciudades vecinas entonces se hace el calculo sobre todas las posibles ciudades
+			if(number_neighbors == 0){
+				 for (unsigned j = 0; j < n; ++j){
+				 	for(unsigned k = 0; k < num_iter; ++k){
+					 	if( j+1 != (*ppaths)[i][k]){
+							city_neighbors_to_go.push_back(j+1);
+							candidate_city_degree = *((*ppdegree_neighbors_list)[i] + j );
+							degree_neighbors_to_go.push_back(candidate_city_degree);							
+						}
+					}
+				 } 
+			}
+
+	 	    // Se guardan en un vector solo los grados de los correspondientes nodos por visitar.
+	 	    // Se calcula un valor booleano que previene que nos olvidemos de un nodo. Si existe un nodo con pocos
+		    // vecinos hay que visitarlo inmediatamente, sino, conviene visitar el más proximo.
+
+	 		immediate_value_bool = std::none_of(immediate_neighbors.begin(), immediate_neighbors.end(), [](bool value) { return value; });
+		    if(immediate_value_bool){
+		  	 	// En caso de que todos los nodos tengan multiples vecinos calcular el mas proximo
+	 	     	for (auto j = city_neighbors_to_go.begin(); j != city_neighbors_to_go.end(); ++j){
+	 		   		city_distances.push_back(*(pdist_complete[city_current-1] + *j-1));
+	 	     	}
+	 	     	dist_min_index = std::min_element(city_distances.begin(), city_distances.end()) - city_distances.begin();
+	 	     	city_min = city_neighbors_to_go[dist_min_index];
+	 	     	dist_min = city_distances[dist_min_index];
+	 	     }
+	 	 	else{
+	 	    	// En caso de que haya que visitar uno inmediatamente entonces añadirlo
+	 	    	dist_min_index = std::min_element(degree_neighbors_to_go.begin(), degree_neighbors_to_go.end()) - degree_neighbors_to_go.begin();
+	 	    	city_min = city_neighbors_to_go[dist_min_index];
+	 	    	dist_min = pdist_complete[city_current-1][city_min-1];
+	 	    }	 	
+	 	    
+	 	    // Todos los vecinos que tengan asociado a la ciudad que se visita se les resta un grado
+		    if(number_neighbors != 0){
+		    	for(auto j = city_neighbors_to_go.begin(); j != city_neighbors_to_go.end(); ++j){
+		    		*((*ppdegree_neighbors_list)[i] + *j -1) = *((*ppdegree_neighbors_list)[i] + *j -1) -1;
+		    	}
+		    }		    
+		    // Se actualiza el grado de la ciudad actual a 0.
+		    *((*ppdegree_neighbors_list)[i] + city_current - 1 ) = 0;
+		    // Se actualiza la matriz de costo.
+		    (*pcosts)[i][num_iter-1] = dist_min;
+		    (*ppaths)[i][num_iter] = city_min;
+		    // Se verifica que no haya crossing
+		    if( num_iter > 2){
+			    tsp_functions::crossing_procedure(city_current, city_min, num_iter, i, ppos, ppaths, pcosts, pdist_complete);
+		    } //end of if iter > 2
+  		} // end of construction of path i
+	} // end of iterations
+	return 0;
+}
+
+void tsp_functions::crossing_procedure(unsigned city_current, unsigned city_min, unsigned num_iter, unsigned i, 
+	double **ppos, unsigned ***ppaths, double ***pcosts, double **pdist_complete){
+	unsigned city11, city12, city21, city22;
+	double b1, b2, m1, m2, x11, x12, x21, x22, y11, y12, y21, y22, x_intersect, dist1_replace, dist2_replace;
+	bool bool1, bool2;
+	vector<unsigned> paths_replace;
+	vector<double> costs_replace;
+	city21 = city_current;
+    x21 = ppos[city21 - 1][0];
+    y21 = ppos[city21 - 1][1];
+    city22 = city_min;
+    x22 = ppos[city22 - 1][0];
+    y22 = ppos[city22 - 1][1];
+    if(x22-x21 != 0){
+    	m2 = (y22 - y21)/(x22-x21);
+    }
+	else{
+		m2 =(y22-y21)/(x22 - x21 + 10e-5);
+  	}
+   	b2 = y21 - m2 * x21;
+   	for(auto j = num_iter-2; j > 0; --j){ // ... las restantes aristas
+        paths_replace.clear();
+    	costs_replace.clear();
+        city11 = (*ppaths)[i][j-1];
+        x11 = ppos[city11 - 1][0];
+        y11 = ppos[city11 - 1][1];
+        city12 = (*ppaths)[i][j];
+        x12 = ppos[city12 -1][0];
+        y12 = ppos[city12 -1][1];
+        if(x12 - x11 != 0){
+          m1 = (y12 - y11)/(x12 - x11);
+        }
+    	else{
+      		m1 = (y12 - y11)/(x12 - x11 + 10e-5);
+    	}
+     	b1 = y11 - m1 * x11;
+     	if(m1 != m2){ //end of if crossing exist
+ 	  		x_intersect = -(b2 - b1)/(m2 - m1);
+       		bool1 = (x11 < x_intersect && x_intersect < x12) || (x12 < x_intersect && x_intersect < x11);
+       		bool2 = (x21 < x_intersect && x_intersect < x22) || (x22 < x_intersect && x_intersect < x21);
+         	if(bool1 && bool2){ // condition for finding crossing
+         		for(unsigned k = j; k < num_iter; ++k){
+         			paths_replace.push_back((*ppaths)[i][k]);  
+         		}
+         		for(unsigned k = 0; k < num_iter - j; ++k){
+         			(*ppaths)[i][num_iter-k-1] = paths_replace[k];  
+         		}
+				dist1_replace = pdist_complete[city11 - 1][city21 - 1];
+	        	dist2_replace = pdist_complete[city12 - 1][city22 - 1];
+	        	costs_replace.push_back(dist1_replace);
+	        	for(unsigned k = num_iter-2; k >= j; --k){
+         			costs_replace.push_back((*pcosts)[i][k]);  
+         		}
+         		costs_replace.push_back(dist2_replace);
+         		for(unsigned k = 0; k < num_iter - j+1; k++){
+         			(*pcosts)[i][j+k-1] = costs_replace[k];  
+         		}
+	            city_current = (*ppaths)[i][num_iter -1];
+	            city21 = city_current;
+	            x21 = ppos[city21 -1][0];
+	   		    y21 = ppos[city21 -1][1];
+       		} // end of if crossing exist
+   		} // end of if slopes are different
+	} // end of for possible crossing
 }
