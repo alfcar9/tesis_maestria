@@ -71,19 +71,36 @@ int main(){
 	tsp_functions::initiate_costs(&pcosts, n);
 
 	tsp_functions::greedy_paths(immediate_value, n, ppos, &ppaths, &pcosts, pdist_complete, pneighbors_degree, pneighbors_list, &pneighbors_degree_list);
-		
-	//tsp_functions::print_matrix(pcosts, 1, n);
-	//tsp_functions::print_matrix(ppaths, 1, n+1);
+	
+	// We calculate cost of last iteration	
 	for(unsigned i = 0; i < n; ++i){
-		//pcosts[i][n-1] = pdist_complete[ppaths[n-1][i]][i];	
+		unsigned city_current;
+		city_current = ppaths[i][n-1];
+		pcosts[i][n-1] = pdist_complete[city_current - 1][i];	
 	}
-	// # Se calcula el costo de cada ciclo
-	// costs_cycles <- sapply(1:n, function(i){sum(costs[i,])})
-	// # Es el indice del mejor ciclo
-	// cycle_index <- which.min(costs_cycles)
-	// # Se guarda el mejor ciclo y su costo
-	// path_min_noswap <- paths[cycle_index,]
-	// cost_min_noswap <- costs_cycles[cycle_index]
+
+	// We calculate the best greedy cycle
+	double costs_cycles[n];
+	for(unsigned i = 0; i < n; ++i){
+		costs_cycles[i] = 0.0;
+		for(unsigned j = 0; j < n; ++j){
+		 	costs_cycles[i] += pcosts[i][j];
+		}
+	}
+	for(unsigned j = 0; j < n; j++){
+		printf("%.2f ,", pcosts[1][j]);
+	}
+	printf("\n");
+	for(unsigned j = 0; j < n; j++){
+		printf("%u ,", ppaths[1][j]);
+	}
+
+	//unsigned cycle_index = std::min_element(costs_cycles, costs_cycles + n) - costs_cycles;
+	
+	printf("El mejor costo es: %f \n \n", costs_cycles[1]);
+	//tsp_functions::print_matrix(ppaths, 1, n+1);
+	//tsp_functions::print_matrix(pcosts, cycle_index, n);
+	//Se guarda el mejor ciclo y su costo
 	
 	
 }

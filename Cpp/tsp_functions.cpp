@@ -310,7 +310,7 @@ void tsp_functions::greedy_paths(unsigned immediate_value, unsigned n, double **
 	// Se verifica que la ultima arista no hace crossing
   	for(unsigned i = 0; i < n; ++i){
 		city_current = ppaths[i][n-1];
-		//tsp_functions::crossing_procedure(city_current, i, n, i, ppos, pppaths, ppcosts, pdist_complete);
+		tsp_functions::crossing_procedure(city_current, i+1, n, i, ppos, pppaths, ppcosts, pdist_complete);
 	}
 }
 
