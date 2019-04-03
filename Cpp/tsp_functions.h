@@ -31,7 +31,7 @@ public:
 	static void initiate_neighborslist(double **pdist_prune, unsigned **ppneighbors_degree, vector<unsigned> ***ppneighbors_list,  
 	unsigned ***ppneighbors_degree_list, unsigned n);
 	
-	static void greedy_paths(unsigned immediate_value, unsigned n, double **ppos, unsigned ***ppaths, double ***pcosts, double **pdist_complete,
+	static int greedy_paths(unsigned immediate_value, unsigned n, double **ppos, unsigned ***ppaths, double ***pcosts, double **pdist_complete,
 		unsigned *pneighbors_degree, vector<unsigned> **pneighbors_list, unsigned ***pneighbors_degree_list);
 
 	static void crossing_procedure(unsigned city_current, unsigned city_min, unsigned num_iter, 

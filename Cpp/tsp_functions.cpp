@@ -222,10 +222,12 @@ void tsp_functions::initiate_neighborslist(double **pdist_prune, unsigned **ppne
 	}
 }
 
-void tsp_functions::greedy_paths(unsigned immediate_value, unsigned n, double **ppos, unsigned ***pppaths, double ***ppcosts, double **pdist_complete,
- unsigned *pneighbors_degree, vector<unsigned> **pneighbors_list, unsigned ***ppneighbors_degree_list){
-	unsigned city_current, number_neighbors, city_min, dist_min_index, candidate_city, candidate_city_degree, *candidate_city_ptr;
-	double dist_min;
+int tsp_functions::greedy_paths(unsigned immediate_value, unsigned n, double **ppos, unsigned ***pppaths, 
+	double ***ppcosts, double **pdist_complete, unsigned *pneighbors_degree, 
+	vector<unsigned> **pneighbors_list, unsigned ***ppneighbors_degree_list){
+	unsigned city_current, number_neighbors, city_min, dist_min_index, candidate_city, candidate_city_degree,
+	 *candidate_city_ptr, cycle_index;
+	double dist_min, costs_cycles[n];
 	bool immediate_value_bool;
 	vector<unsigned> city_neighbors_to_go, degree_neighbors_to_go;
 	vector<double> city_distances;
@@ -257,15 +259,14 @@ void tsp_functions::greedy_paths(unsigned immediate_value, unsigned n, double **
 
 			// Si no hay ciudades vecinas entonces se hace el calculo sobre todas las posibles ciudades
 			if(number_neighbors == 0){
-				 for (unsigned j = 0; j < n; ++j){
-				 	for(unsigned k = 0; k < num_iter; ++k){
-					 	if( j+1 != ppaths[i][k]){
-							city_neighbors_to_go.push_back(j+1);
-							candidate_city_degree = *(pneighbors_degree_list[i] + j );
-							degree_neighbors_to_go.push_back(candidate_city_degree);							
-						}
+				for(unsigned j = 1; j <= n; ++j){
+				 	candidate_city_ptr = find(ppaths[i], ppaths[i] + num_iter, j);
+				 	if( candidate_city_ptr == ppaths[i] + num_iter ){
+						city_neighbors_to_go.push_back(j);
+						candidate_city_degree = *(pneighbors_degree_list[i] + j - 1 );
+						degree_neighbors_to_go.push_back(candidate_city_degree);							
 					}
-				 } 
+				} 
 			}
 
 	 	    // Se guardan en un vector solo los grados de los correspondientes nodos por visitar.
@@ -292,7 +293,7 @@ void tsp_functions::greedy_paths(unsigned immediate_value, unsigned n, double **
 	 	    // Todos los vecinos que tengan asociado a la ciudad que se visita se les resta un grado
 		    if(number_neighbors != 0){
 		    	for(auto j = city_neighbors_to_go.begin(); j != city_neighbors_to_go.end(); ++j){
-		    		*(pneighbors_degree_list[i] + *j -1) = *(pneighbors_degree_list[i] + *j -1) -1;
+		    		*(pneighbors_degree_list[i] + *j -1 ) = *(pneighbors_degree_list[i] + *j -1 ) -1;
 		    	}
 		    }		    
 		    // Se actualiza el grado de la ciudad actual a 0.
@@ -312,6 +313,21 @@ void tsp_functions::greedy_paths(unsigned immediate_value, unsigned n, double **
 		city_current = ppaths[i][n-1];
 		tsp_functions::crossing_procedure(city_current, i+1, n, i, ppos, pppaths, ppcosts, pdist_complete);
 	}
+
+	//We calculate cost of last iteration	
+	for(unsigned i = 0; i < n; ++i){
+		city_current = ppaths[i][n-1];
+		pcosts[i][n-1] = pdist_complete[city_current - 1][i];	
+	}
+
+	for(unsigned i = 0; i < n; ++i){
+		costs_cycles[i] = 0.0;
+		for(unsigned j = 0; j < n; ++j){
+		 	costs_cycles[i] += pcosts[i][j];
+		}
+	}
+	cycle_index = std::min_element(costs_cycles, costs_cycles + n) - costs_cycles;
+	return cycle_index;
 }
 
 void tsp_functions::crossing_procedure(unsigned city_current, unsigned city_min, unsigned num_iter, unsigned i, 

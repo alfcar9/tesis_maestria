@@ -17,7 +17,8 @@ using namespace std; //shorthand for standard input
 
 int main(){
 	// Determines size of instance
-	unsigned n; // Declare size of instance, number of city
+	unsigned n, cycle_index; // Declare size of instance, number of city
+	double costs_min;
 	const std::string input = "../Instancias/berlin52.tsp"; // Name of instance file
 	n = tsp_functions::finds_number(input); // Gets instance size
 
@@ -70,34 +71,22 @@ int main(){
 	tsp_functions::initiate_paths(&ppaths, n);
 	tsp_functions::initiate_costs(&pcosts, n);
 
-	tsp_functions::greedy_paths(immediate_value, n, ppos, &ppaths, &pcosts, pdist_complete, pneighbors_degree, pneighbors_list, &pneighbors_degree_list);
-	
-	// We calculate cost of last iteration	
-	for(unsigned i = 0; i < n; ++i){
-		unsigned city_current;
-		city_current = ppaths[i][n-1];
-		pcosts[i][n-1] = pdist_complete[city_current - 1][i];	
+	cycle_index = tsp_functions::greedy_paths(immediate_value, n, ppos, &ppaths, &pcosts, pdist_complete, pneighbors_degree, pneighbors_list, &pneighbors_degree_list);
+
+	// for(unsigned j = 0; j < n; j++){
+	// 	printf("%.2f ,", pcosts[1][j]);
+	// }
+	// printf("\n");
+	// for(unsigned j = 0; j < n; j++){
+	// 	printf("%u  ", ppaths[1][j]);
+	// }
+	costs_min = 0.0;
+	for(unsigned j = 0; j < n; ++j){
+	 	costs_min += pcosts[cycle_index][j];
 	}
 
-	// We calculate the best greedy cycle
-	double costs_cycles[n];
-	for(unsigned i = 0; i < n; ++i){
-		costs_cycles[i] = 0.0;
-		for(unsigned j = 0; j < n; ++j){
-		 	costs_cycles[i] += pcosts[i][j];
-		}
-	}
-	for(unsigned j = 0; j < n; j++){
-		printf("%.2f ,", pcosts[1][j]);
-	}
-	printf("\n");
-	for(unsigned j = 0; j < n; j++){
-		printf("%u ,", ppaths[1][j]);
-	}
-
-	//unsigned cycle_index = std::min_element(costs_cycles, costs_cycles + n) - costs_cycles;
-	
-	printf("El mejor costo es: %f \n \n", costs_cycles[1]);
+	printf("%u\n", cycle_index);
+	printf("%.2f\n", costs_min);
 	//tsp_functions::print_matrix(ppaths, 1, n+1);
 	//tsp_functions::print_matrix(pcosts, cycle_index, n);
 	//Se guarda el mejor ciclo y su costo
