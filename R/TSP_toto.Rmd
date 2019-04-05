@@ -21,7 +21,6 @@ library(stringr)
 numextract <- function(string){ 
   str_extract(string, "\\-*\\d+\\.*\\d*")
 } 
-
 # Define Euclidean distance funcion
 dist_euclidean <- function(i, j){
   result <- (i-j)^2 %>% sum() %>% sqrt()
@@ -40,7 +39,6 @@ matrix_euclidean <- function(matrix_pos){
   }
   return(matrix_dist)
 }
-
 # Hace simétrica la matrix
 matrix_symmetric <- function(matrix){
   for(i in 1:(n-1)){
@@ -57,7 +55,6 @@ matrix_symmetric <- function(matrix){
   }
   return(matrix)
 }
-
 TSP_plot <- function(cities_pos_df, camino_heuristica, camino_heuristica_original){
   n <- nrow(cities_pos_df)
   g <- ggplot(cities_pos_df, aes(x = V1, y = V2)) + geom_point() + theme_bw() + geom_text(aes(label=c(1:n)), hjust=0, vjust=0)
@@ -79,26 +76,25 @@ TSP_plot <- function(cities_pos_df, camino_heuristica, camino_heuristica_origina
   }
   return(g)
 }
-
 index_function <- function(i,j){
   return(which(paths[i,]==j)[1])
 }
 
 crossing_procedure <- function(city_current, city_min, num_iter, i){
-  city21=city_current
-  x21=cities_pos[city21,1]
-  y21=cities_pos[city21,2]
-  city22=city_min
-  x22=cities_pos[city22,1]
-  y22=cities_pos[city22,2]
+  city21<-city_current
+  x21<-cities_pos[city21,1]
+  y21<-cities_pos[city21,2]
+  city22<-city_min
+  x22<-cities_pos[city22,1]
+  y22<-cities_pos[city22,2]
   if(x22-x21 != 0){
-    m2 = (y22-y21)/(x22-x21)
+    m2 <- (y22-y21)/(x22-x21)
   }
   else{
-    m2 =(y22-y21)/(x22-x21+10e-5)
+    m2 <- Inf
   }
-  b2 = y21-m2*x21
-  for(k in (num_iter-2):1){ # ... las restantes aristas
+  b2 <- y21-m2*x21
+  for(k in (num_iter-1):1){ # ... las restantes aristas
     city11 <- paths[i,k]
     x11 <- cities_pos[city11,1]
     y11 <- cities_pos[city11,2]
@@ -109,34 +105,83 @@ crossing_procedure <- function(city_current, city_min, num_iter, i){
       m1 <- (y12-y11)/(x12-x11)
     }
     else{
-      m1 <- (y12-y11)/(x12-x11+10e-5)
+      m1 <- Inf
     }
-    b1 <- y11-m1*x11
-    if(m1 != m2){
-      x_intersect <- -(b2-b1)/(m2-m1)
-      bool1 <- (x11 < x_intersect & x_intersect < x12) | (x12 < x_intersect & x_intersect < x11)
-      bool2 <- (x21 < x_intersect & x_intersect < x22) | (x22 < x_intersect & x_intersect < x21)
-      if(bool1 & bool2){ # condition for finding crossing
+    b1 <- y11 - m1 * x11
+    if(m1 < Inf & m2 < Inf){
+      if(m1 != m2){
+        x_intersect <- -(b2 - b1)/(m2 - m1)
+        bool1 <- (x11 + epsilon < x_intersect & x_intersect < x12 - epsilon) | (x12 + epsilon < x_intersect & x_intersect < x11 - epsilon)
+        bool2 <- (x21 + epsilon < x_intersect & x_intersect < x22 - epsilon) | (x22 + epsilon < x_intersect & x_intersect < x21 - epsilon)
+      }
+      else{
+        if(b1 != b2){
+          bool1 <- FALSE
+          bool2 <- FALSE
+        }
+        else{
+          x11_aux <- min(x11, x12)
+          x12_aux <- max(x11, x12)
+          x21_aux <- min(x21, x22)
+          x22_aux <- max(x21, x22)
+          bool1 <- (x11_aux + epsilon < x21_aux & x21_aux < x12_aux - epsilon) | (x11_aux + epsilon < x22_aux & x22_aux < x12_aux - epsilon) | (x11_aux == x21_aux) | (x22_aux == x12_aux)
+          bool2 <- TRUE
+        }
+      }
+    }
+    else if( m1 == Inf & m2 < Inf ){
+      x_intersect <- x11
+      y_intersect <- m2 * x_intersect + b2
+      bool1 <- (x21 + epsilon < x_intersect & x_intersect < x22 - epsilon) | (x22 + epsilon < x_intersect & x_intersect < x21 - epsilon)
+      bool2 <- (y11 + epsilon < y_intersect & y_intersect < y12 - epsilon) | (y12 + epsilon < y_intersect & y_intersect < y11 - epsilon)
+    }
+    else if( m1 < Inf & m2 == Inf ){
+      x_intersect <- x21
+      y_intersect <- m1 * x_intersect + b1
+      bool1 <- (x11 + epsilon < x_intersect & x_intersect < x12 - epsilon ) | (x12 + epsilon < x_intersect & x_intersect < x11 - epsilon)
+      bool2 <- (y21 + epsilon < y_intersect & y_intersect < y22 - epsilon ) | (y22 + epsilon < y_intersect & y_intersect < y21 - epsilon)
+    }
+    else{
+      y11_aux <- min(y11, y12)
+      y12_aux <- max(y11, y12)
+      y21_aux <- min(y21, y22)
+      y22_aux <- max(y21, y22)
+      bool1 <- TRUE
+      bool1 <- (y11_aux + epsilon < y21_aux & y21_aux < y12_aux - epsilon) | (y11_aux + epsilon < y22_aux & y22_aux < y12_aux - epsilon) | (y11_aux == y21_aux) | (y22_aux == y12_aux)
+    }
+    if(bool1 & bool2){ # condition for finding crossing
+      if(k != num_iter-1){
         replace_crossing <- rev(paths[i,(k+1):num_iter])
         paths[i,(k+1):num_iter] <<- replace_crossing
         dist1_replace <- cities_dist_original[city11,city21]
         dist2_replace <- cities_dist_original[city12,city22]
         costs[i,k:num_iter] <<- c(dist1_replace, rev(costs[i,(k+1):(num_iter-1)]), dist2_replace)
-        city_current <<- paths[i, num_iter]
-        city21=city_current
-        x21=cities_pos[city21,1]
-        y21=cities_pos[city21,2]
-      } # end of if crossing exist
-    } # end of if slopes are different
+        city_current <- paths[i, num_iter]
+        city21 <- city_current
+        x21 <- cities_pos[city21,1]
+        y21 <- cities_pos[city21,2]
+      }
+      else{
+        replace_crossing <- rev(paths[i,k:num_iter])
+        paths[i, k:num_iter] <<- replace_crossing
+        dist1_replace <- cities_dist_original[paths[i, (num_iter-2)], city12]
+        dist2_replace <- cities_dist_original[city11,city22]
+        costs[i, c(num_iter-2,num_iter)] <<- c(dist1_replace, dist2_replace)
+        city_current <- paths[i, num_iter]
+        city21 <- city_current
+      }
+    } # end of if crossing exist
   } # end of for possible crossing
 }
 ```
 
 # Hyper parameters
 ```{r}
+epsilon <- 10e-5
 set.seed(11212)
 proportion_edges <- 1/3 # Each node will only have this proportion of neighbors with respect the n neighbors
-immediate_value <- 3 # When a node has this number of neighbors then it adds to the path regardless of the cost
+#immediate_value <- 2 # When a node has this number of neighbors then it adds to the path regardless of the cost
+immediate_value <- rep(c(2,3), ceiling(n/2))[1:n]
 ```
 
 # Main
@@ -172,11 +217,9 @@ for(i in 1:n){
       }
    }
 }
-
 # It is possible that the resulting matrix is not symmetric because there is no symmetry in the fact that 
 # the kth neighbor v2 for a v1 node might not be the kth neighbor v1 for v2.
 cities_dist <- matrix_symmetric(cities_dist)
-
 # We define a list that has the neighbors of each node. Because each node can have different amount of neighbors a matrix
 # is not an appropriate path.
 neighbors_list <- list()
@@ -213,7 +256,7 @@ for(num_iter in 1:m){
     degree_neighbors_to_go <- degree_neighbors_list[[i]][cities_neighbors_to_go]
     # Se calcula un valor booleano que previene que nos olvidemos de un nodo. Si existe un nodo con pocos
     # vecinos hay que visitarlo inmediatamente, sino, conviene visitar el más proximo.
-    immediate_neighbors <- degree_neighbors_to_go <= immediate_value
+    immediate_neighbors <- degree_neighbors_to_go <= immediate_value[i]
     if(all(!immediate_neighbors)){
       # En caso de que todos los nodos tengan multiples vecinos calcular el mas proximo
       city_distances <- cities_dist_original[city_current, cities_neighbors_to_go]
@@ -240,23 +283,18 @@ for(num_iter in 1:m){
     } #end of if iter > 2
   } # end of construction of path i
 } # end of iterations
-
-
 # Se verifica que la ultima arista no hace crossing
-num_iter <- num_iter+1
-if(num_iter==n){
+if(num_iter==(n-1)){
+  num_iter <- num_iter+1
   for(i in 1:n){
     city_current <- paths[i, n]
     crossing_procedure(city_current, i, num_iter, i)
   }
 } #end of if iter > 2
-
 # Se hace el costo de cerrar el ciclo.
 if(m == n-1){
   costs[1:n, n]  <- sapply(1:n, function(i){cities_dist_original[paths[i, n], i]})
 }
-
-
 # Se calcula el costo de cada ciclo
 costs_cycles <- sapply(1:n, function(i){sum(costs[i,])})
 # Es el indice del mejor ciclo
@@ -264,6 +302,10 @@ cycle_index <- which.min(costs_cycles)
 # Se guarda el mejor ciclo y su costo
 path_min_noswap <- paths[cycle_index,]
 cost_min_noswap <- costs_cycles[cycle_index]
+
+# Se inicializan el camino que ha de swapearse.
+path_min_swap <- paths[cycle_index,]
+cost_min_swap <- costs_cycles[cycle_index]
 ```
 
 ```{r}
@@ -292,7 +334,7 @@ while(success>0){
   path_cost_vector <- c() # se guarda el costo total de cada estructura
   for(len in 3:(n-1)){  # se fija una longitud
     ini <- 1            # comenzando en el primer nodo
-    end <- len+1        # hasta el nodo len + 1 se hace lo siguiente 
+    end <- len+1        # hasta el nodo len + 1 se hace lo siguiente
     for(j in 1:n){   # para cada longitud existen siempre n paths posibles por revisar en el ciclo inicial
       path <- paths_ext[cycle_index, ini:end] # se guarda la secuencia de ciudades
       path_cost <- sum(costs_ext[cycle_index, ini:(end-1)]) # el costo de las transiciones
@@ -324,7 +366,7 @@ while(success>0){
             if(not_in_list){
               success <- success + 1 # se incrementa success
               path_list[[success]] <- path1 # se agrega a la lista
-              path_cost_vector[success] <- path1_cost - path_cost # agrega la utilidad 
+              path_cost_vector[success] <- path1_cost - path_cost # agrega la utilidad
               path_index_list[[success]] <- c(k, index_begin, index_end) # informacion de donde empieza y donde acaba
             }
           }
@@ -345,7 +387,7 @@ while(success>0){
               path_index_list[[success]] <- c(k, index_end, index_begin+n)
             } # termina if not_in_list
           } # termina if que el costo es menor
-        } # termina if de que se contienen las mismas ciudades 
+        } # termina if de que se contienen las mismas ciudades
       } # termina for de busqueda de ese camino especifico
       # se incrementan el incio y fin y se revisan asi los n posibles caminos
       ini <- ini + 1
@@ -369,7 +411,7 @@ while(success>0){
         }
       }
       else{
-        m <- m+1 
+        m <- m+1
         path_list_refined[[m]] <- path_cand
         path_index_vector_refined[m] <- index
       }
@@ -388,11 +430,11 @@ while(success>0){
         # En este caso se puede sustituir la estructura en el camino sin necesidad de cortarlo
         # Puede ser que haya que ponerlo tal y como esta o en reversa
         if(index_head > index_tail){
-          path_replace <- rev(path_replace) 
+          path_replace <- rev(path_replace)
           costs_replace <- rev(costs_replace)
           aux <- index_head
           index_head <- index_tail
-          index_tail <- aux  
+          index_tail <- aux
         }
         paths[cycle_index, index_head:index_tail] <- path_replace
         costs[cycle_index, index_head:(index_tail-1)] <- costs_replace
@@ -403,7 +445,7 @@ while(success>0){
           costs_replace <- rev(costs_replace)
           aux <- index_head
           index_head <- index_tail
-          index_tail <- aux  
+          index_tail <- aux
         }
         index_cut <- which(path_replace == cycle_index) #encuentra donde hay que hacer el corte de la estructura
         path_head <- path_replace[1:index_cut] # se parte en dos, head
@@ -437,8 +479,10 @@ algorith_time <- end_time - start_time
 ```
 
 ```{r}
+#plot_index <- 40
 cities_pos_df <- as.data.frame(cities_pos)
 g1 <- TSP_plot(cities_pos_df, path_min_noswap, path_min_noswap) +  ggtitle("Greedy")  + labs (x = cost_min_noswap, y = "")
+#g2 <- TSP_plot(cities_pos_df, paths[plot_index,], paths[plot_index,]) +  ggtitle("Greedy")  + labs (x = costs_cycles[plot_index], y = "")
 g2 <- TSP_plot(cities_pos_df, path_min_swap, path_min_noswap) +  ggtitle("Swapping")  + labs (x = cost_min_swap, y = "")
 grid.arrange (g1, g2, nrow=1)
 ```
