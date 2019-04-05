@@ -58,23 +58,6 @@ matrix_symmetric <- function(matrix){
   return(matrix)
 }
 
-# Updates distance matrix when triangle Inequality is not satissfied
-desigualdad_triangulo <- function(cities_dist)
-  for(i in 1:(n-1)){
-    for(j in (i+1):n){
-      distancia_minima <- cities_dist[i,j]
-      set <- setdiff(1:n, c(i,j))
-      for(k in set){
-        distancia_indirecta <- cities_dist[i,k] + cities_dist[k,j]
-        if(distancia_indirecta < distancia_minima){
-          distancia_minima <- distancia_indirecta
-        }
-      }
-      cities_dist[i,j] <- distancia_minima
-      cities_dist[j,i] <- distancia_minima
-    }
-    return(cities_dist)
-  }
 TSP_plot <- function(cities_pos_df, camino_heuristica, camino_heuristica_original){
   n <- nrow(cities_pos_df)
   g <- ggplot(cities_pos_df, aes(x = V1, y = V2)) + geom_point() + theme_bw() + geom_text(aes(label=c(1:n)), hjust=0, vjust=0)
@@ -99,6 +82,53 @@ TSP_plot <- function(cities_pos_df, camino_heuristica, camino_heuristica_origina
 
 index_function <- function(i,j){
   return(which(paths[i,]==j)[1])
+}
+
+crossing_procedure <- function(city_current, city_min, num_iter, i){
+  city21=city_current
+  x21=cities_pos[city21,1]
+  y21=cities_pos[city21,2]
+  city22=city_min
+  x22=cities_pos[city22,1]
+  y22=cities_pos[city22,2]
+  if(x22-x21 != 0){
+    m2 = (y22-y21)/(x22-x21)
+  }
+  else{
+    m2 =(y22-y21)/(x22-x21+10e-5)
+  }
+  b2 = y21-m2*x21
+  for(k in (num_iter-2):1){ # ... las restantes aristas
+    city11 <- paths[i,k]
+    x11 <- cities_pos[city11,1]
+    y11 <- cities_pos[city11,2]
+    city12 <- paths[i,k+1]
+    x12 <- cities_pos[city12,1]
+    y12 <- cities_pos[city12,2]
+    if(x12-x11 != 0){
+      m1 <- (y12-y11)/(x12-x11)
+    }
+    else{
+      m1 <- (y12-y11)/(x12-x11+10e-5)
+    }
+    b1 <- y11-m1*x11
+    if(m1 != m2){
+      x_intersect <- -(b2-b1)/(m2-m1)
+      bool1 <- (x11 < x_intersect & x_intersect < x12) | (x12 < x_intersect & x_intersect < x11)
+      bool2 <- (x21 < x_intersect & x_intersect < x22) | (x22 < x_intersect & x_intersect < x21)
+      if(bool1 & bool2){ # condition for finding crossing
+        replace_crossing <- rev(paths[i,(k+1):num_iter])
+        paths[i,(k+1):num_iter] <<- replace_crossing
+        dist1_replace <- cities_dist_original[city11,city21]
+        dist2_replace <- cities_dist_original[city12,city22]
+        costs[i,k:num_iter] <<- c(dist1_replace, rev(costs[i,(k+1):(num_iter-1)]), dist2_replace)
+        city_current <<- paths[i, num_iter]
+        city21=city_current
+        x21=cities_pos[city21,1]
+        y21=cities_pos[city21,2]
+      } # end of if crossing exist
+    } # end of if slopes are different
+  } # end of for possible crossing
 }
 ```
 
@@ -206,50 +236,7 @@ for(num_iter in 1:m){
     paths[i, num_iter+1] <- city_min
     # Se verifica que no haya crossing
     if(num_iter>2){
-      city21=city_current
-      x21=cities_pos[city21,1]
-      y21=cities_pos[city21,2]
-      city22=city_min
-      x22=cities_pos[city22,1]
-      y22=cities_pos[city22,2]
-      if(x22-x21 != 0){
-        m2 = (y22-y21)/(x22-x21)
-      }
-      else{
-        m2 =(y22-y21)/(x22-x21+10e-5)
-      }
-      b2 = y21-m2*x21
-      for(k in (num_iter-2):1){ # ... las restantes aristas
-        city11 <- paths[i,k]
-        x11 <- cities_pos[city11,1]
-        y11 <- cities_pos[city11,2]
-        city12 <- paths[i,k+1]
-        x12 <- cities_pos[city12,1]
-        y12 <- cities_pos[city12,2]
-        if(x12-x11 != 0){
-          m1 <- (y12-y11)/(x12-x11)
-        }
-        else{
-          m1 <- (y12-y11)/(x12-x11+10e-5)
-        }
-        b1 <- y11-m1*x11
-        if(m1 != m2){
-          x_intersect <- -(b2-b1)/(m2-m1)
-          bool1 <- (x11 < x_intersect & x_intersect < x12) | (x12 < x_intersect & x_intersect < x11)
-          bool2 <- (x21 < x_intersect & x_intersect < x22) | (x22 < x_intersect & x_intersect < x21)
-          if(bool1 & bool2){ # condition for finding crossing
-            replace_crossing <- rev(paths[i,(k+1):num_iter])
-            paths[i,(k+1):num_iter] <- replace_crossing
-            dist1_replace <- cities_dist_original[city11,city21]
-            dist2_replace <- cities_dist_original[city12,city22]
-            costs[i,k:num_iter] = c(dist1_replace, rev(costs[i,(k+1):(num_iter-1)]), dist2_replace)
-            city_current <- paths[i, num_iter]
-            city21=city_current
-            x21=cities_pos[city21,1]
-            y21=cities_pos[city21,2]
-          } # end of if crossing exist
-        } # end of if slopes are different
-      } # end of for possible crossing
+      crossing_procedure(city_current, city_min, num_iter, i)
     } #end of if iter > 2
   } # end of construction of path i
 } # end of iterations
@@ -260,53 +247,7 @@ num_iter <- num_iter+1
 if(num_iter==n){
   for(i in 1:n){
     city_current <- paths[i, n]
-    city21=city_current
-    x21=cities_pos[city21,1]
-    y21=cities_pos[city21,2]
-    city22=i
-    x22=cities_pos[city22,1]
-    y22=cities_pos[city22,2]
-    if(x22-x21 != 0){
-      m2 = (y22-y21)/(x22-x21)
-    }
-    else{
-      m2 =(y22-y21)/(x22-x21+10e-5)
-    }
-    b2 = y21-m2*x21
-    for(k in (num_iter-2):1){ # ... las restantes aristas
-      # Se revisan las aristas en orden inverso porque asi se sustituye el crossing mas cercano
-      # el menos 2 es porque no puede haber crossing con la arista inmediata anterior
-    #for(k in 1:(num_iter-2)){ # ... las restantes aristas
-      city11 <- paths[i,k]
-      x11 <- cities_pos[city11,1]
-      y11 <- cities_pos[city11,2]
-      city12 <- paths[i,k+1]
-      x12 <- cities_pos[city12,1]
-      y12 <- cities_pos[city12,2]
-      if(x12-x11 != 0){
-        m1 <- (y12-y11)/(x12-x11)
-      }
-      else{
-        m1 <- (y12-y11)/(x12-x11+10e-5)
-      }
-      b1 <- y11-m1*x11
-      if(m1 != m2){
-        x_intersect <- -(b2-b1)/(m2-m1)
-        bool1 <- (x11 < x_intersect & x_intersect < x12) | (x12 < x_intersect & x_intersect < x11)
-        bool2 <- (x21 < x_intersect & x_intersect < x22) | (x22 < x_intersect & x_intersect < x21)
-        if(bool1 & bool2){ # condition for finding crossing
-          replace_crossing <- rev(paths[i,(k+1):num_iter])
-          paths[i,(k+1):num_iter] <- replace_crossing
-          dist1_replace <- cities_dist_original[city11,city21]
-          dist2_replace <- cities_dist_original[city12,city22]
-          costs[i,k:num_iter] = c(dist1_replace, rev(costs[i,(k+1):(num_iter-1)]), dist2_replace)
-          city_current <- paths[i, num_iter]
-          city21=city_current
-          x21=cities_pos[city21,1]
-          y21=cities_pos[city21,2]
-        } # end of if crossing exist
-      } # end of if slopes are different
-    } # end of for possible crossing
+    crossing_procedure(city_current, i, num_iter, i)
   }
 } #end of if iter > 2
 
@@ -497,7 +438,7 @@ algorith_time <- end_time - start_time
 
 ```{r}
 cities_pos_df <- as.data.frame(cities_pos)
-g1 <- TSP_plot(cities_pos_df, paths[1,], paths[1,]) +  ggtitle("Greedy")  + labs (x = cost_min_noswap, y = "")
+g1 <- TSP_plot(cities_pos_df, path_min_noswap, path_min_noswap) +  ggtitle("Greedy")  + labs (x = cost_min_noswap, y = "")
 g2 <- TSP_plot(cities_pos_df, path_min_swap, path_min_noswap) +  ggtitle("Swapping")  + labs (x = cost_min_swap, y = "")
 grid.arrange (g1, g2, nrow=1)
 ```
