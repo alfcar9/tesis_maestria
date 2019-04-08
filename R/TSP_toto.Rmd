@@ -33,7 +33,7 @@ matrix_euclidean <- function(matrix_pos){
     i_vec <- matrix_pos[i,]
     for(j in (i+1):n){
       j_vec <- matrix_pos[j,]
-      matrix_dist[i,j] <- dist_euclidean(i_vec, j_vec)  %>% round(2)
+      matrix_dist[i,j] <- dist_euclidean(i_vec, j_vec)
       matrix_dist[j,i] <- matrix_dist[i,j]
     }
   }
@@ -194,7 +194,7 @@ position_index <- 1
 ```{r}
 start_time <- Sys.time()
 ######################################## LEER ARCHIVO
-name_instance <- "eil101.tsp"
+name_instance <- "berlin52.tsp"
 name_instance <- paste0("~/Desktop/Tesis_Maestria/tesis_maestria/Instancias/", name_instance)
 n <- numextract(name_instance) %>% as.double()
 instancia <- read_table2(name_instance, skip = 6, col_names = FALSE, n_max = n)
@@ -495,8 +495,8 @@ algorith_time <- end_time - start_time
 
 ```{r}
 cities_pos_df <- as.data.frame(cities_pos)
-g1 <- TSP_plot(cities_pos_df, path_min_noswap, path_min_noswap) +  ggtitle("Greedy")  + labs (x = total_cost_min_noswap, y = "")
+g1 <- TSP_plot(cities_pos_df, path_min_noswap, path_min_noswap) +  ggtitle("Greedy")  + labs (x = round(total_cost_min_noswap,2), y = "")
 #g2 <- TSP_plot(cities_pos_df, paths[plot_index,], paths[plot_index,]) +  ggtitle("Greedy")  + labs (x = costs_cycles[plot_index], y = "")
-g2 <- TSP_plot(cities_pos_df, path_min_swap, path_min_noswap) +  ggtitle("Swapping")  + labs (x = total_cost_min_swap, y = "")
+g2 <- TSP_plot(cities_pos_df, path_min_swap, path_min_noswap) +  ggtitle("Swapping")  + labs (x = round(total_cost_min_swap,2), y = "")
 grid.arrange (g1, g2, nrow=1)
 ```
