@@ -149,7 +149,7 @@ crossing_procedure <- function(city_current, city_min, num_iter, i, paths_vec, c
   list_crossing <- list(paths_vec, costs_vec)
 }
 
-TSP_function <- function(proportion_edges = 0.2, immediate_value = 3, position_index = 1){
+TSP_function <- function(proportion_edges = 0.2, immediate_value = 3, position_index = 1, initial_solution){
   name_instance <- "berlin52.tsp"
   name_instance <- paste0("~/Desktop/Tesis_Maestria/tesis_maestria/Instancias/", name_instance)
   n <- numextract(name_instance) %>% as.double()
@@ -260,12 +260,23 @@ TSP_function <- function(proportion_edges = 0.2, immediate_value = 3, position_i
     costs_cycles_aux[cycle_index] <- Inf
   }
 
-  # Es el indice del mejor ciclo
-  cycle_index <- cycle_indexes[position_index]
-  # Se guarda el mejor ciclo y su costo
-  path_min_noswap <- paths[cycle_index,]
-  cost_min_noswap <- costs[cycle_index,]
-  total_cost_min_noswap <- sum(cost_min_noswap)
+  if(missing(initial_solution)){
+    # Es el indice del mejor ciclo
+    cycle_index <- cycle_indexes[position_index]
+    # Se guarda el mejor ciclo y su costo
+    path_min_noswap <- paths[cycle_index,]
+    cost_min_noswap <- costs[cycle_index,]
+    total_cost_min_noswap <- sum(cost_min_noswap)
+  }
+  else{
+    path_min_noswap <- initial_solution
+    cost_min_noswap <- c()
+    for(i in 1:n){
+      cost_min_noswap[i] <- cities_dist_original[path_min_noswap[i], path_min_noswap[i+1]]
+    }
+    total_cost_min_noswap <- sum(cost_min_noswap)
+    print(total_cost_min_noswap)
+  }
 
   # Se inicializan el camino que ha de swapearse.
   path_min_swap <- path_min_noswap
@@ -280,14 +291,19 @@ TSP_function <- function(proportion_edges = 0.2, immediate_value = 3, position_i
   costs_ext <- matrix(0L, nrow = n, ncol = 2*n)
   # Se generan estas estructuras
   for(i in 1:n){
-    index_matrix[i,] <- sapply(1:n, function(j) index_function(paths[i,],j))
+    index_matrix[i,] <- sapply(1:n, function(j) index_function(paths[i,], j))
     paths_ext[i,] <-  c(paths[i,], paths[i,2:n])
     costs_ext[i,] <-  c(costs[i,], costs[i,])
   }
   
   path_min_swap_ext <- c(path_min_swap, path_min_swap[2:n])
   cost_min_swap_ext <- c(cost_min_swap, cost_min_swap[2:n])
-  index_min_swap <- index_matrix[cycle_index,]
+  if(missing(initial_solution)){
+    index_min_swap <- index_matrix[cycle_index,]  
+  }
+  else{
+    index_min_swap <- sapply(1:n, function(j) index_function(path_min_swap, j))
+  }
   
   success <- 1 # Indica que se encontró alguna estructura que swapear, se define 1 para que entre al while al menos una vez
   while(success>0){
@@ -426,7 +442,9 @@ TSP_function <- function(proportion_edges = 0.2, immediate_value = 3, position_i
     }
   }
   total_cost_min_swap <- sum(cost_min_swap)
-  return(path_min_swap)
+  list_output <- list(path_min_swap, total_cost_min_swap)
+  return(list_output)
 }
 
-a <- TSP_function()
+a <- TSP_function(proportion_edges = 0.2, immediate_value = 3, position_index = 1)
+b <- TSP_function(proportion_edges = 0.5, immediate_value = 3, position_index = 1, initial_solution = a[[1]])
