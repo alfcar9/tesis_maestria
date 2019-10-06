@@ -2,16 +2,46 @@ library(tidyverse)
 library(gridExtra)
 library(stringr)
 
-# Define extract number from string
+# Plots a TSP solution.
+TSP_plot <- function(cities_pos_df, camino_heuristica, camino_heuristica_original){
+  n <- nrow(cities_pos_df)
+  g <- ggplot(cities_pos_df, aes(x = V1, y = V2)) + geom_point() + theme_bw() #+ geom_text(aes(label=c(1:n)), hjust=0, vjust=0)
+  
+  if(all(!camino_heuristica==0)){
+    m <- n
+  }
+  else{
+    m <- min(which(camino_heuristica==0))-2 
+  }
+  
+  for(i in 1:m){
+    edge <- c(camino_heuristica[i], camino_heuristica[i+1])
+    i_vec <- flatten_dbl(cities_pos_df[edge[1],])
+    j_vec <- flatten_dbl(cities_pos_df[edge[2],])
+    indexes <- which(camino_heuristica_original %in% edge) %>% sort()
+    
+    if( abs(indexes[2] - indexes[1]) == 1 || (length(indexes) == 3 && indexes[3] - indexes[2] == 1 ) ){
+      g <- g + geom_segment(x = i_vec[1], xend = j_vec[1], y = i_vec[2], yend = j_vec[2], color = "black")
+    }
+    else{
+      g <- g + geom_segment(x = i_vec[1] , xend = j_vec[1], y = i_vec[2], yend = j_vec[2], color = "red") 
+    }
+  }
+  return(g)
+}
+
+# Extract number from string
 numextract <- function(string){ 
   str_extract(string, "\\-*\\d+\\.*\\d*")
-} 
+}
+
 # Define Euclidean distance funcion
 dist_euclidean <- function(i, j){
   result <- (i-j)^2 %>% sum() %>% sqrt()
   return(result)
 }
-# Given set of coordiantes calculates euclidean distance and adds noice.
+
+# Given set of coordiantes calculates euclidean distance.
 matrix_euclidean <- function(matrix_pos, n){
   matrix_dist <- matrix(integer(n^2), ncol = n)
   for(i in 1:(n-1)){
@@ -24,7 +54,9 @@ matrix_euclidean <- function(matrix_pos, n){
   }
   return(matrix_dist)
 }
-# Hace simétrica la matrix
+
+# Makes symmetric a matrix by checking if matrix M[i][j] = M[j][i]. 
+# If the values differ then it replaces the smaller equal to the greater value.
 matrix_symmetric <- function(matrix, n){
   for(i in 1:(n-1)){
     for(j in (i+1):n){
@@ -149,11 +181,11 @@ crossing_procedure <- function(city_current, city_min, num_iter, i, paths_vec, c
   list_crossing <- list(paths_vec, costs_vec)
 }
 
+name_instance <- "berlin52.tsp"
 TSP_function <- function(proportion_edges = 0.2, immediate_value = 3, position_index = 1, initial_solution){
-  name_instance <- "berlin52.tsp"
-  name_instance <- paste0("~/Desktop/Tesis_Maestria/tesis_maestria/Instancias/", name_instance)
+  name_instance <- paste0("~/Maestria/4to_Semestre/Tesis_Maestria/tesis_maestria/Instancias/", name_instance)
   n <- numextract(name_instance) %>% as.double()
-  instancia <- read_table2(name_instance, skip = 6, col_names = FALSE, n_max = n)
+  instancia <- read_table2(name_instance, skip = 6, col_names = FALSE, n_max = n, col_types = cols())
   cities_pos <- instancia[,2:3]
   cities_pos <- as.matrix(cities_pos)
   colnames(cities_pos) <- c("V1", "V2")
@@ -254,7 +286,7 @@ TSP_function <- function(proportion_edges = 0.2, immediate_value = 3, position_i
 
   costs_cycles_aux <- costs_cycles
   cycle_indexes <- c()
-  for(i in 1:10){
+  for(i in 1:position_index){
     cycle_index <- which.min(costs_cycles_aux)
     cycle_indexes[i] <- cycle_index
     costs_cycles_aux[cycle_index] <- Inf
@@ -267,6 +299,8 @@ TSP_function <- function(proportion_edges = 0.2, immediate_value = 3, position_i
     path_min_noswap <- paths[cycle_index,]
     cost_min_noswap <- costs[cycle_index,]
     total_cost_min_noswap <- sum(cost_min_noswap)
+    print(path_min_noswap)
+    print(total_cost_min_noswap)
   }
   else{
     path_min_noswap <- initial_solution
@@ -275,7 +309,12 @@ TSP_function <- function(proportion_edges = 0.2, immediate_value = 3, position_i
       cost_min_noswap[i] <- cities_dist_original[path_min_noswap[i], path_min_noswap[i+1]]
     }
     total_cost_min_noswap <- sum(cost_min_noswap)
-    print(total_cost_min_noswap)
+    if(total_cost_min_noswap > min(costs_cycles)){
+      cycle_index <- which.min(costs_cycles)
+      path_min_noswap <- paths[cycle_index,]
+      cost_min_noswap <- costs[cycle_index,]
+      total_cost_min_noswap <- sum(cost_min_noswap)
+    }
   }
 
   # Se inicializan el camino que ha de swapearse.
@@ -288,16 +327,16 @@ TSP_function <- function(proportion_edges = 0.2, immediate_value = 3, position_i
   # Se generan los caminos extendidos para poder considerar en una sola matriz todos los caminos posibles leidos como secuencia
   paths_ext <- matrix(0L, nrow = n, ncol = 2*n)
   # Lo análogo con la funcion de costos
-  costs_ext <- matrix(0L, nrow = n, ncol = 2*n)
+  costs_ext <- matrix(0L, nrow = n, ncol = 2*n-1)
   # Se generan estas estructuras
   for(i in 1:n){
     index_matrix[i,] <- sapply(1:n, function(j) index_function(paths[i,], j))
     paths_ext[i,] <-  c(paths[i,], paths[i,2:n])
-    costs_ext[i,] <-  c(costs[i,], costs[i,])
+    costs_ext[i,] <-  c(costs[i,], costs[i, 1:(n-1)])
   }
   
   path_min_swap_ext <- c(path_min_swap, path_min_swap[2:n])
-  cost_min_swap_ext <- c(cost_min_swap, cost_min_swap[2:n])
+  cost_min_swap_ext <- c(cost_min_swap, cost_min_swap[1:(n-1)])
   if(missing(initial_solution)){
     index_min_swap <- index_matrix[cycle_index,]  
   }
@@ -437,14 +476,34 @@ TSP_function <- function(proportion_edges = 0.2, immediate_value = 3, position_i
         }
         index_min_swap <- sapply(1:n, function(j) {which(path_min_swap==j)[1]})
         path_min_swap_ext <-  c(path_min_swap, path_min_swap[2:n])
-        cost_min_swap_ext <-  c(cost_min_swap, cost_min_swap)
+        cost_min_swap_ext <-  c(cost_min_swap, cost_min_swap[1:(n-1)])
       }
     }
   }
   total_cost_min_swap <- sum(cost_min_swap)
   list_output <- list(path_min_swap, total_cost_min_swap)
+  print(total_cost_min_swap)
   return(list_output)
 }
 
-a <- TSP_function(proportion_edges = 0.2, immediate_value = 3, position_index = 1)
-b <- TSP_function(proportion_edges = 0.5, immediate_value = 3, position_index = 1, initial_solution = a[[1]])
+output_tour <- TSP_function(proportion_edges = 0.05, immediate_value = 3, position_index = 2)
+name_tour <- paste0("tour", 1)
+assign(name_tour, output_tour)
+for(j in 2:15){
+  output_tour <- TSP_function(proportion_edges = runif(1,1/25,0.7), immediate_value = ceiling(4*runif(1)), initial_solution = output_tour[[1]])
+  name_tour <- paste0("tour", j)
+  assign(name_tour, output_tour)
+}
+
+tour0 <- c(14, 13, 52, 11, 51, 12, 28, 27, 46, 38, 40, 39, 35, 34, 44, 37, 24, 48, 15,  5,  6, 25,  4, 43, 33, 10,  9, 45, 32, 49, 36,  1, 22, 19,  8, 41, 18, 31, 21,  3, 17, 42,  7,  2, 23, 30, 20, 50, 29, 16, 47, 26, 14)
+tour_plot1 <- tour1
+tour_plot2 <- tour9
+name_instance_path <- paste0("~/Maestria/4to_Semestre/Tesis_Maestria/tesis_maestria/Instancias/", name_instance)
+n <- numextract(name_instance) %>% as.double()
+instancia <- read_table2(name_instance_path, skip = 6, col_names = FALSE, n_max = n, col_types = cols())
+cities_pos <- instancia[,2:3]
+cities_pos <- as.matrix(cities_pos)
+colnames(cities_pos) <- c("V1", "V2")
+cities_pos_df <- as.data.frame(cities_pos)
+g6 <- TSP_plot(cities_pos_df, tour_plot2[[1]], tour_plot1[[1]]) + ggtitle("Iter 9") + labs (x = round(tour_plot2[[2]], 2), y = "")
+g6

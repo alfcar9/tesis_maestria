@@ -20,7 +20,8 @@ library(stringr)
 # Define extract number from string
 numextract <- function(string){ 
   str_extract(string, "\\-*\\d+\\.*\\d*")
-} 
+}
+
 # Define Euclidean distance funcion
 dist_euclidean <- function(i, j){
   result <- (i-j)^2 %>% sum() %>% sqrt()
@@ -55,6 +56,7 @@ matrix_symmetric <- function(matrix){
   }
   return(matrix)
 }
+
 TSP_plot <- function(cities_pos_df, camino_heuristica, camino_heuristica_original){
   n <- nrow(cities_pos_df)
   g <- ggplot(cities_pos_df, aes(x = V1, y = V2)) + geom_point() + theme_bw()# + geom_text(aes(label=c(1:n)), hjust=0, vjust=0)
@@ -81,14 +83,14 @@ index_function <- function(i,j){
 }
 
 crossing_procedure <- function(city_current, city_min, num_iter, i){
-  city21<-city_current
-  x21<-cities_pos[city21,1]
-  y21<-cities_pos[city21,2]
-  city22<-city_min
-  x22<-cities_pos[city22,1]
-  y22<-cities_pos[city22,2]
-  if(x22-x21 != 0){
-    m2 <- (y22-y21)/(x22-x21)
+  city21 <- city_current
+  x21 <- cities_pos[city21,1]
+  y21 <- cities_pos[city21,2]
+  city22 <- city_min
+  x22 <- cities_pos[city22,1]
+  y22 <- cities_pos[city22,2]
+  if(x22 - x21 != 0){
+    m2 <- (y22 - y21)/(x22 - x21)
   }
   else{
     m2 <- Inf
@@ -101,25 +103,25 @@ crossing_procedure <- function(city_current, city_min, num_iter, i){
     city12 <- paths[i,k+1]
     x12 <- cities_pos[city12,1]
     y12 <- cities_pos[city12,2]
-    if(x12-x11 != 0){
+    if(x12 - x11 != 0){
       m1 <- (y12-y11)/(x12-x11)
     }
     else{
       m1 <- Inf
     }
     b1 <- y11 - m1 * x11
-    if(m1 < Inf & m2 < Inf){
-      if(m1 != m2){
-        x_intersect <- -(b2 - b1)/(m2 - m1)
+    if(m1 < Inf & m2 < Inf){ # both slopes are finite
+      if(m1 != m2){ # not parallel
+        x_intersect <- -(b2 - b1)/(m2 - m1) # the intersection is within the edge, not in the vertex
         bool1 <- (x11 + epsilon < x_intersect & x_intersect < x12 - epsilon) | (x12 + epsilon < x_intersect & x_intersect < x11 - epsilon)
         bool2 <- (x21 + epsilon < x_intersect & x_intersect < x22 - epsilon) | (x22 + epsilon < x_intersect & x_intersect < x21 - epsilon)
       }
       else{
-        if(b1 != b2){
+        if(b1 != b2){ # not overlapped means no intesection
           bool1 <- FALSE
           bool2 <- FALSE
         }
-        else{
+        else{ # lines overlapped, but does the segments have intersection?
           x11_aux <- min(x11, x12)
           x12_aux <- max(x11, x12)
           x21_aux <- min(x21, x22)
@@ -129,19 +131,19 @@ crossing_procedure <- function(city_current, city_min, num_iter, i){
         }
       }
     }
-    else if( m1 == Inf & m2 < Inf ){
+    else if( m1 == Inf & m2 < Inf ){ # check for intersection
       x_intersect <- x11
       y_intersect <- m2 * x_intersect + b2
       bool1 <- (x21 + epsilon < x_intersect & x_intersect < x22 - epsilon) | (x22 + epsilon < x_intersect & x_intersect < x21 - epsilon)
       bool2 <- (y11 + epsilon < y_intersect & y_intersect < y12 - epsilon) | (y12 + epsilon < y_intersect & y_intersect < y11 - epsilon)
     }
-    else if( m1 < Inf & m2 == Inf ){
+    else if( m1 < Inf & m2 == Inf ){ # check for intersection
       x_intersect <- x21
       y_intersect <- m1 * x_intersect + b1
       bool1 <- (x11 + epsilon < x_intersect & x_intersect < x12 - epsilon ) | (x12 + epsilon < x_intersect & x_intersect < x11 - epsilon)
       bool2 <- (y21 + epsilon < y_intersect & y_intersect < y22 - epsilon ) | (y22 + epsilon < y_intersect & y_intersect < y21 - epsilon)
     }
-    else{
+    else{ # both are infinite, check if segments intersect
       if(x11 == x21){
         y11_aux <- min(y11, y12)
         y12_aux <- max(y11, y12)
@@ -160,14 +162,14 @@ crossing_procedure <- function(city_current, city_min, num_iter, i){
         costs[i,k:num_iter] <<- c(dist1_replace, rev(costs[i,(k+1):(num_iter-1)]), dist2_replace)
         num_iter_aux <- index_function(i, city11)
         if(num_iter_aux > 2){
-          crossing_procedure(city11, city21, num_iter_aux, i)
+          crossing_procedure(city11, city21, num_iter_aux, i) # recursive crossing procedure
         }
-        city_current <- paths[i, num_iter]
+        city_current <- paths[i, num_iter] # update values for next iteration
         city21 <- city_current
         x21 <- cities_pos[city21,1]
         y21 <- cities_pos[city21,2]
       }
-      else{
+      else{ # specific case where the crossing is with the previous edge.
         replace_crossing <- rev(paths[i,k:num_iter])
         paths[i, k:num_iter] <<- replace_crossing
         dist1_replace <- cities_dist_original[paths[i, (num_iter-2)], city12]
@@ -195,8 +197,8 @@ position_index <- 1
 start_time <- Sys.time()
 ######################################## LEER ARCHIVO
 name_instance <- "berlin52.tsp"
-name_instance <- paste0("~/Desktop/Tesis_Maestria/tesis_maestria/Instancias/", name_instance)
 n <- numextract(name_instance) %>% as.double()
+name_instance <- paste0("~/Maestria/4to_Semestre/Tesis_Maestria/tesis_maestria/Instancias/", name_instance)
 instancia <- read_table2(name_instance, skip = 6, col_names = FALSE, n_max = n)
 cities_pos <- instancia[,2:3]
 ######################################## GENERAR matrix ALEATORIA
@@ -330,16 +332,16 @@ index_matrix <- matrix(0L, nrow = n, ncol = n)
 # Se generan los caminos extendidos para poder considerar en una sola matriz todos los caminos posibles leidos como secuencia
 paths_ext <- matrix(0L, nrow = n, ncol = 2*n)
 # Lo análogo con la funcion de costos
-costs_ext <- matrix(0L, nrow = n, ncol = 2*n)
+costs_ext <- matrix(0L, nrow = n, ncol = 2*n-1)
 # Se generan estas estructuras
 for(i in 1:n){
   index_matrix[i,] <- sapply(1:n, function(j) index_function(i,j))
   paths_ext[i,] <-  c(paths[i,], paths[i,2:n])
-  costs_ext[i,] <-  c(costs[i,], costs[i,])
+  costs_ext[i,] <-  c(costs[i,], costs[i,1:(n-1)])
 }
 
 path_min_swap_ext <- c(path_min_swap, path_min_swap[2:n])
-cost_min_swap_ext <- c(cost_min_swap, cost_min_swap[2:n])
+cost_min_swap_ext <- c(cost_min_swap, cost_min_swap[1:(n-1)])
 index_min_swap <- index_matrix[cycle_index,]
 ```
 
