@@ -32,7 +32,7 @@ TSP_plot <- function(cities_pos_df, camino_heuristica, camino_heuristica_origina
 
 # Extract number from string
 numextract <- function(string){ 
-  str_extract(string, "\\-*\\d+\\.*\\d*")
+  str_extract(string, "\\d+\\..*$") %>% str_extract("\\d+") %>% as.double()
 }
 
 # Define Euclidean distance funcion
@@ -181,7 +181,7 @@ crossing_procedure <- function(city_current, city_min, num_iter, i, paths_vec, c
   list_crossing <- list(paths_vec, costs_vec)
 }
 
-name_instance <- "berlin52.tsp"
+name_instance <- "a54.tsp"
 TSP_function <- function(proportion_edges = 0.2, immediate_value = 3, position_index = 1, initial_solution){
   name_instance <- paste0("~/Maestria/4to_Semestre/Tesis_Maestria/tesis_maestria/Instancias/", name_instance)
   n <- numextract(name_instance) %>% as.double()
@@ -489,21 +489,20 @@ TSP_function <- function(proportion_edges = 0.2, immediate_value = 3, position_i
 output_tour <- TSP_function(proportion_edges = 0.05, immediate_value = 3, position_index = 2)
 name_tour <- paste0("tour", 1)
 assign(name_tour, output_tour)
-for(j in 2:15){
-  output_tour <- TSP_function(proportion_edges = runif(1,1/25,0.7), immediate_value = ceiling(4*runif(1)), initial_solution = output_tour[[1]])
-  name_tour <- paste0("tour", j)
-  assign(name_tour, output_tour)
-}
+# for(j in 2:15){
+#   output_tour <- TSP_function(proportion_edges = runif(1,1/25,0.7), immediate_value = ceiling(4*runif(1)), initial_solution = output_tour[[1]])
+#   name_tour <- paste0("tour", j)
+#   assign(name_tour, output_tour)
+# }
 
-tour0 <- c(14, 13, 52, 11, 51, 12, 28, 27, 46, 38, 40, 39, 35, 34, 44, 37, 24, 48, 15,  5,  6, 25,  4, 43, 33, 10,  9, 45, 32, 49, 36,  1, 22, 19,  8, 41, 18, 31, 21,  3, 17, 42,  7,  2, 23, 30, 20, 50, 29, 16, 47, 26, 14)
+#tour0 <- c(14, 13, 52, 11, 51, 12, 28, 27, 46, 38, 40, 39, 35, 34, 44, 37, 24, 48, 15,  5,  6, 25,  4, 43, 33, 10,  9, 45, 32, 49, 36,  1, 22, 19,  8, 41, 18, 31, 21,  3, 17, 42,  7,  2, 23, 30, 20, 50, 29, 16, 47, 26, 14)
 tour_plot1 <- tour1
-tour_plot2 <- tour9
-name_instance_path <- paste0("~/Maestria/4to_Semestre/Tesis_Maestria/tesis_maestria/Instancias/", name_instance)
-n <- numextract(name_instance) %>% as.double()
+tour_plot2 <- tour1
+#name_instance_path <- paste0("~/Maestria/4to_Semestre/Tesis_Maestria/tesis_maestria/Instancias/", name_instance)
+#n <- numextract(name_instance) %>% as.double()
 instancia <- read_table2(name_instance_path, skip = 6, col_names = FALSE, n_max = n, col_types = cols())
-cities_pos <- instancia[,2:3]
-cities_pos <- as.matrix(cities_pos)
+cities_pos <- as.matrix(instancia[,2:3])
 colnames(cities_pos) <- c("V1", "V2")
 cities_pos_df <- as.data.frame(cities_pos)
-g6 <- TSP_plot(cities_pos_df, tour_plot2[[1]], tour_plot1[[1]]) + ggtitle("Iter 9") + labs (x = round(tour_plot2[[2]], 2), y = "")
-g6
+g1 <- TSP_plot(cities_pos_df, tour_plot2[[1]], tour_plot1[[1]]) + ggtitle("Iter 9") + labs (x = round(tour_plot2[[2]], 2), y = "")
+g1

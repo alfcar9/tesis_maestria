@@ -19,7 +19,7 @@ library(stringr)
 ```{r}
 # Define extract number from string
 numextract <- function(string){ 
-  str_extract(string, "\\-*\\d+\\.*\\d*")
+  str_extract(string, "\\d+\\..*$") %>% str_extract("\\d+") %>% as.double()
 }
 
 # Define Euclidean distance funcion
@@ -27,7 +27,7 @@ dist_euclidean <- function(i, j){
   result <- (i-j)^2 %>% sum() %>% sqrt()
   return(result)
 }
-# Given set of coordiantes calculates euclidean distance and adds noice.
+# Given set of coordiantes calculates euclidean distance.
 matrix_euclidean <- function(matrix_pos){
   matrix_dist <- matrix(integer(n^2), ncol = n)
   for(i in 1:(n-1)){
@@ -40,7 +40,7 @@ matrix_euclidean <- function(matrix_pos){
   }
   return(matrix_dist)
 }
-# Hace simétrica la matrix
+# Makes a matrix symmetric. If an entry is not symmetric takes the larger one. 
 matrix_symmetric <- function(matrix){
   for(i in 1:(n-1)){
     for(j in (i+1):n){
@@ -57,29 +57,32 @@ matrix_symmetric <- function(matrix){
   return(matrix)
 }
 
+# Plots two solutions, with the edges that differ.
 TSP_plot <- function(cities_pos_df, camino_heuristica, camino_heuristica_original){
   n <- nrow(cities_pos_df)
-  g <- ggplot(cities_pos_df, aes(x = V1, y = V2)) + geom_point() + theme_bw()# + geom_text(aes(label=c(1:n)), hjust=0, vjust=0)
+  g <- ggplot(cities_pos_df, aes(x = V1, y = V2)) + geom_point() + theme_bw() #+ geom_text(aes(label=c(1:n)), hjust=0, vjust=0)
+  
   if(all(!camino_heuristica==0)){
     m <- n
   }
   else{
-   m <- min(which(camino_heuristica==0))-2 
+    m <- min(which(camino_heuristica==0))-2 
   }
+  
   for(i in 1:m){
-     i_vec <- flatten_dbl(cities_pos_df[camino_heuristica[i],])
-     j_vec <- flatten_dbl(cities_pos_df[camino_heuristica[i+1],])
-     if(camino_heuristica[i] == camino_heuristica_original[i]){
-        g <- g + geom_segment(x = i_vec[1], xend = j_vec[1], y = i_vec[2], yend = j_vec[2], color="black")
-     }
-     else{
-       g <- g + geom_segment(x = i_vec[1] , xend = j_vec[1], y = i_vec[2], yend = j_vec[2], color="red") 
-     }
+    edge <- c(camino_heuristica[i], camino_heuristica[i+1])
+    i_vec <- flatten_dbl(cities_pos_df[edge[1],])
+    j_vec <- flatten_dbl(cities_pos_df[edge[2],])
+    indexes <- which(camino_heuristica_original %in% edge) %>% sort()
+    
+    if( abs(indexes[2] - indexes[1]) == 1 || (length(indexes) == 3 && indexes[3] - indexes[2] == 1 ) ){
+      g <- g + geom_segment(x = i_vec[1], xend = j_vec[1], y = i_vec[2], yend = j_vec[2], color = "black")
+    }
+    else{
+      g <- g + geom_segment(x = i_vec[1] , xend = j_vec[1], y = i_vec[2], yend = j_vec[2], color = "red") 
+    }
   }
   return(g)
-}
-index_function <- function(i,j){
-  return(which(paths[i,]==j)[1])
 }
 
 crossing_procedure <- function(city_current, city_min, num_iter, i){
@@ -89,14 +92,14 @@ crossing_procedure <- function(city_current, city_min, num_iter, i){
   city22 <- city_min
   x22 <- cities_pos[city22,1]
   y22 <- cities_pos[city22,2]
-  if(x22 - x21 != 0){
+  if(x22 - x21 != 0){ # Checks if slope is finite.
     m2 <- (y22 - y21)/(x22 - x21)
   }
   else{
     m2 <- Inf
   }
   b2 <- y21-m2*x21
-  for(k in (num_iter-1):1){ # ... las restantes aristas
+  for(k in (num_iter-1):1){ # ... recursive checking
     city11 <- paths[i,k]
     x11 <- cities_pos[city11,1]
     y11 <- cities_pos[city11,2]
@@ -196,9 +199,9 @@ position_index <- 1
 ```{r}
 start_time <- Sys.time()
 ######################################## LEER ARCHIVO
-name_instance <- "berlin52.tsp"
-n <- numextract(name_instance) %>% as.double()
+name_instance <- "a280.tsp"
 name_instance <- paste0("~/Maestria/4to_Semestre/Tesis_Maestria/tesis_maestria/Instancias/", name_instance)
+n <- numextract(name_instance) %>% as.double()
 instancia <- read_table2(name_instance, skip = 6, col_names = FALSE, n_max = n)
 cities_pos <- instancia[,2:3]
 ######################################## GENERAR matrix ALEATORIA
