@@ -1,7 +1,6 @@
 # Load libraries
 library(tidyverse) # Operations like %in%, etc.
 library(gridExtra) # For ploting
-library(stringr) # R for regular expressions
 
 ##################################################################
 ################## FUNCTIONS #####################################
@@ -36,14 +35,6 @@ TSP_plot <- function(cities_pos_df, path_heuristic, path_heuristic_original){
   }
   # Returns a ggplot
   return(g)
-}
-
-# Function for extracting number from string. 
-# The names of the instances in TSLIB are given with the number of nodes at the end.
-# The input string in the function of TSP is the directory of the instance. 
-# This function takes only the number at the end of the name of the instance directory.
-numextract <- function(string){ 
-  str_extract(string, "\\d+\\..*$") %>% str_extract("\\d+") %>% as.double()
 }
 
 # Function for calculating the euclidean distance where the inputs are vectors.
@@ -111,7 +102,6 @@ crossing_procedure <- function(city_current, city_min, num_iter, i, paths_vec, c
   k <- num_iter-1
   history_cities <- c()
   while(k >= 1){
-  #for(k in (num_iter-1):1){
     city11 <- paths_vec[k]
     x11 <- cities_pos[city11,1]
     y11 <- cities_pos[city11,2]
@@ -219,7 +209,6 @@ crossing_procedure <- function(city_current, city_min, num_iter, i, paths_vec, c
   list_crossing <- list(paths_vec, costs_vec)
 }
 
-name_instance <- "eil101.tsp"
 TSP_function <- function(proportion_edges = 0.2, immediate_value = 2, position_index = 2, initial_solution){
   name_instance <- paste0("~/Maestria/4to_Semestre/Tesis_Maestria/tesis_maestria/Instancias/", name_instance)
   n <- numextract(name_instance)
@@ -524,22 +513,29 @@ TSP_function <- function(proportion_edges = 0.2, immediate_value = 2, position_i
   return(list_output)
 }
 
+############### MAIN ####################################################################
+name_instance <- "a280.tsp"
+name_instance_path <- paste0("~/Maestria/4to_Semestre/Tesis_Maestria/tesis_maestria/Instancias/", name_instance)
+cities_pos_df  <- read_table2(name_instance_path, skip = 6, col_names = c("V1", "V2"), n_max = n, col_types = cols("-", "i", "i")) %>% as.data.frame() %>% distinct()
+cities_pos <- as.matrix(cities_pos_df)
+n <- nrow(cities_pos_df)
+
+start.time <- Sys.time()
 output_tour <- TSP_function(proportion_edges = 0.05, immediate_value = 3, position_index = 1)
 name_tour <- paste0("tour", 1)
+end.time <- Sys.time()
+time.taken <- end.time - start.time
+time.taken
+
 assign(name_tour, output_tour)
-for(j in 2:10){
-  output_tour <- TSP_function(proportion_edges = runif(1,1/25,0.7), immediate_value = ceiling(4*runif(1)), initial_solution = output_tour[[1]])
-  name_tour <- paste0("tour", j)
-  assign(name_tour, output_tour)
-}
+# for(j in 2:2){
+#   output_tour <- TSP_function(proportion_edges = runif(1,1/25,0.7), immediate_value = ceiling(4*runif(1)), initial_solution = output_tour[[1]])
+#   name_tour <- paste0("tour", j)
+#   assign(name_tour, output_tour)
+# }
 
 tour_plot1 <- tour1
 tour_plot2 <- tour1
-name_instance_path <- paste0("~/Maestria/4to_Semestre/Tesis_Maestria/tesis_maestria/Instancias/", name_instance)
-n <- numextract(name_instance) %>% as.double()
-instancia <- read_table2(name_instance_path, skip = 6, col_names = FALSE, n_max = n, col_types = cols())
-cities_pos <- as.matrix(instancia[,2:3])
-colnames(cities_pos) <- c("V1", "V2")
-cities_pos_df <- as.data.frame(cities_pos)
+
 g1 <- TSP_plot(cities_pos_df, tour_plot2[[1]], tour_plot1[[1]]) + ggtitle("Iter 9") + labs (x = round(tour_plot2[[2]], 2), y = "")
 g1
