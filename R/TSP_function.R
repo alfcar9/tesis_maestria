@@ -1,13 +1,13 @@
 # Load libraries
 library(tidyverse) # Operations like %in%, etc.
 library(gridExtra) # For ploting
+library(stringr) # R for regular expressions
 
 ##################################################################
 ################## FUNCTIONS #####################################
 ##################################################################
 # Function for plotting solutions.
 # Takes as input the dataframe with the coordinates of the cities and two cicles for comparisson. 
-# The first argument path_heuristic is the solution of the algorithm, the current solution.
 # The second argument, path_heuristic_original, is the solution before the swapping procedure.
 TSP_plot <- function(cities_pos_df, path_heuristic, path_heuristic_original){
   n <- nrow(cities_pos_df)
@@ -37,6 +37,21 @@ TSP_plot <- function(cities_pos_df, path_heuristic, path_heuristic_original){
   return(g)
 }
 
+# Function for extracting number from string. 	
+# The names of the instances in TSLIB are given with the number of nodes at the end.	
+# The input string in the function of TSP is the directory of the instance. 	
+# This function takes only the number at the end of the name of the instance directory.	
+num_extract <- function(string){ 
+  s <- str_extract(string, "\\d+$") %>% as.double() 
+  return(s)	
+}	
+
+# Extracts the distance function of R
+dist_extract <- function(string){
+  s <- str_match(string, "\\S+$")
+  return(s)
+}
+
 # Function for calculating the euclidean distance where the inputs are vectors.
 dist_euclidean <- function(i, j){
   result <- (i-j)^2 %>% sum() %>% sqrt()
@@ -45,16 +60,48 @@ dist_euclidean <- function(i, j){
 
 # Given a matrix of two columnos and n rows, which set the coordinates of cities. This function
 # calculates the matrix of distances.
-matrix_euclidean <- function(matrix_pos, n){
+matrix_cost <- function(matrix_pos, n, distance_type){
   matrix_dist <- matrix(integer(n^2), ncol = n)
-  for(i in 1:(n-1)){
-    i_vec <- matrix_pos[i,]
-    for(j in (i+1):n){
-      j_vec <- matrix_pos[j,]
-      matrix_dist[i,j] <- dist_euclidean(i_vec, j_vec)
-      matrix_dist[j,i] <- matrix_dist[i,j]
+  if(distance_type == "EUC_2D"){
+    for(i in 1:(n-1)){
+      i_vec <- matrix_pos[i,]
+      for(j in (i+1):n){
+        j_vec <- matrix_pos[j,]
+        dij <- dist_euclidean(i_vec, j_vec)
+        matrix_dist[i,j] <- dij
+        matrix_dist[j,i] <- dij
+      }
     }
-  }
+  } else if (distance_type == "GEO"){
+    PI <- 3.141592
+    RRR <- 6378.388
+    for(i in 1:(n-1)){
+      i_vec <- matrix_pos[i,]
+      deg <- round(i_vec[1])
+      min <- i_vec[1] - deg
+      i_latitude <- PI * (deg + 5.0 * min / 3.0) / 180.0
+      deg <- round(i_vec[2])
+      min <- i_vec[2] - deg
+      i_longitude <- PI * (deg + 5.0 * min / 3.0) / 180.0 
+      for(j in (i+1):n){
+        j_vec <- matrix_pos[j,]
+        deg <- round(j_vec[1])
+        min <- j_vec[1] - deg
+        j_latitude <- PI * (deg + 5.0 * min / 3.0) / 180.0
+        deg <- round(j_vec[2])
+        min <- j_vec[2] - deg
+        j_longitude <- PI * (deg + 5.0 * min / 3.0) / 180.0 
+        q1 <- cos( i_longitude - j_longitude )
+        q2 <- cos( i_latitude - j_latitude)
+        q3 <- cos( i_latitude + j_latitude)
+        dij <- round( RRR * acos( 0.5*((1.0+q1)*q2 - (1.0 - q1)*q3)) + 1.0)
+        matrix_dist[i,j] <- dij
+        matrix_dist[j,i] <- dij
+      }
+    }
+  } else{
+    break
+  }  
   return(matrix_dist)
 }
 
@@ -209,13 +256,9 @@ crossing_procedure <- function(city_current, city_min, num_iter, i, paths_vec, c
   list_crossing <- list(paths_vec, costs_vec)
 }
 
-TSP_function <- function(proportion_edges = 0.2, immediate_value = 2, position_index = 2, initial_solution){
-  name_instance <- paste0("~/Maestria/4to_Semestre/Tesis_Maestria/tesis_maestria/Instancias/", name_instance)
-  n <- numextract(name_instance)
-  instancia <- read_table2(name_instance, skip = 6, col_names = FALSE, n_max = n, col_types = cols())
-  cities_pos <- as.matrix(instancia[,2:3])
-  colnames(cities_pos) <- c("V1", "V2")
-  cities_dist_original <- matrix_euclidean(cities_pos, n) # Generate distance matrix
+TSP_function <- function(immediate_value = 2, proportion_edges = 0.2,  position_index = 1, initial_solution, distance_type){
+  
+  cities_dist_original <- matrix_cost(cities_pos, n, distance_type) # Generate distance matrix
   cities_dist <- cities_dist_original # For last iteration, save original values
   # Eliminate all but the first kth nearest edges for each node.
   total_neighbors <- floor(n*proportion_edges) # Number of the first kth neighbors, the rest edges will get eliminated
@@ -516,26 +559,36 @@ TSP_function <- function(proportion_edges = 0.2, immediate_value = 2, position_i
 ############### MAIN ####################################################################
 name_instance <- "a280.tsp"
 name_instance_path <- paste0("~/Maestria/4to_Semestre/Tesis_Maestria/tesis_maestria/Instancias/", name_instance)
-cities_pos_df  <- read_table2(name_instance_path, skip = 6, col_names = c("V1", "V2"), n_max = n, col_types = cols("-", "i", "i")) %>% as.data.frame() %>% distinct()
-cities_pos <- as.matrix(cities_pos_df)
-n <- nrow(cities_pos_df)
+instance_vector <- readLines(name_instance_path)[4:5]
+n <- num_extract(instance_vector[1])
+edge_type <- dist_extract(instance_vector[2])
+if(edge_type == "EUC_2D"){
+  cities_pos_df  <- read_table2(name_instance_path, skip = 6, col_names = c("V1", "V2"), n_max = n, col_types = cols("-", "d", "d")) %>% as.data.frame() %>% distinct()
+  n <- nrow(cities_pos_df)
+} else if (edge_type == "GEO"){
+  cities_pos_df  <- read_table2(name_instance_path, skip = 7, col_names = c("V1", "V2"), n_max = n, col_types = cols("-", "d", "d")) %>% as.data.frame() %>% distinct()
+  n <- nrow(cities_pos_df)
+} else{
+  cities_pos_df <- NA
+}
 
+cities_pos <- as.matrix(cities_pos_df)
 start.time <- Sys.time()
-output_tour <- TSP_function(proportion_edges = 0.05, immediate_value = 3, position_index = 1)
+output_tour <- TSP_function(position_index = 1, immediate_value = 3, proportion_edges = 0.05, distance_type = edge_type)
 name_tour <- paste0("tour", 1)
 end.time <- Sys.time()
 time.taken <- end.time - start.time
 time.taken
 
 assign(name_tour, output_tour)
-# for(j in 2:2){
-#   output_tour <- TSP_function(proportion_edges = runif(1,1/25,0.7), immediate_value = ceiling(4*runif(1)), initial_solution = output_tour[[1]])
-#   name_tour <- paste0("tour", j)
-#   assign(name_tour, output_tour)
-# }
+for(j in 2:10){
+  output_tour <- TSP_function(immediate_value = ceiling(4*runif(1)), proportion_edges = runif(1,1/25,0.7), initial_solution = output_tour[[1]], distance_type = edge_type)
+  name_tour <- paste0("tour", j)
+  assign(name_tour, output_tour)
+}
 
 tour_plot1 <- tour1
-tour_plot2 <- tour1
+tour_plot2 <- tour10
 
-g1 <- TSP_plot(cities_pos_df, tour_plot2[[1]], tour_plot1[[1]]) + ggtitle("Iter 9") + labs (x = round(tour_plot2[[2]], 2), y = "")
+g1 <- TSP_plot(cities_pos_df, tour_plot2[[1]], tour_plot1[[1]]) + ggtitle("Iter 1") + labs (x = round(tour_plot2[[2]], 2), y = "")
 g1
