@@ -54,7 +54,7 @@ dist_extract <- function(string){
 
 # Function for calculating the euclidean distance where the inputs are vectors.
 dist_euclidean <- function(i, j){
-  result <- (i-j)^2 %>% sum() %>% sqrt()
+  result <- (i-j)^2 %>% sum() %>% sqrt() %>% round()
   return(result)
 }
 
@@ -557,8 +557,10 @@ TSP_function <- function(immediate_value = 2, proportion_edges = 0.2,  position_
 }
 
 ############### MAIN ####################################################################
-name_instance <- "a280.tsp"
-name_instance_path <- paste0("~/Maestria/4to_Semestre/Tesis_Maestria/tesis_maestria/Instancias/", name_instance)
+
+set.seed(130912)
+name_instance <- "berlin52.tsp"
+name_instance_path <- paste0("../TSPLIB/TSPLIB_original/", name_instance)
 instance_vector <- readLines(name_instance_path)[4:5]
 n <- num_extract(instance_vector[1])
 edge_type <- dist_extract(instance_vector[2])
@@ -581,8 +583,8 @@ time.taken <- end.time - start.time
 time.taken
 
 assign(name_tour, output_tour)
-for(j in 2:10){
-  output_tour <- TSP_function(immediate_value = ceiling(4*runif(1)), proportion_edges = runif(1,1/25,0.7), initial_solution = output_tour[[1]], distance_type = edge_type)
+for(j in 2:15){
+  output_tour <- TSP_function(immediate_value = ceiling(4*runif(1)), proportion_edges = runif(1,1/20,0.7), initial_solution = output_tour[[1]], distance_type = edge_type)
   name_tour <- paste0("tour", j)
   assign(name_tour, output_tour)
 }
@@ -590,5 +592,5 @@ for(j in 2:10){
 tour_plot1 <- tour1
 tour_plot2 <- tour10
 
-g1 <- TSP_plot(cities_pos_df, tour_plot2[[1]], tour_plot1[[1]]) + ggtitle("Iter 1") + labs (x = round(tour_plot2[[2]], 2), y = "")
+g1 <- TSP_plot(cities_pos_df, tour_plot2[[1]], tour_plot1[[1]]) #+ ggtitle("Iter 1") + labs (x = round(tour_plot2[[2]], 2), y = "")
 g1

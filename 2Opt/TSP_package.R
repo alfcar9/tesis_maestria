@@ -13,8 +13,8 @@ dist_extract <- function(string){
 }
 
 
-name_instance <- "burma14.tsp"
-name_instance_path <- paste0("~/Maestria/4to_Semestre/Tesis_Maestria/tesis_maestria/Instancias/", name_instance)
+name_instance <- "berlin52.tsp"
+name_instance_path <- paste0("../TSPLIB/TSPLIB_original/", name_instance)
 instance_vector <- readLines(name_instance_path)[4:5]
 n <- num_extract(instance_vector[1])
 edge_type <- dist_extract(instance_vector[2])
