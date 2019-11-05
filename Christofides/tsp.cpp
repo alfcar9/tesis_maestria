@@ -79,23 +79,36 @@ int TSP::get_distance(struct TSP::City c1, struct TSP::City c2){
 	double RRR, Pi, min, latitude1, latitude2, longitude1, longitude2, q1, q2, q3;
 	Pi = 3.141592;
     RRR = 6378.388;
-    deg = floor(c1.x + 0.5);
+    if(c1.x >= 0)
+      deg = floor(c1.x);
+    else
+      deg = -floor(-1*c1.x);
     min = c1.x - deg;
     latitude1 = Pi * (deg + 5.0 * min / 3.0) / 180.0;
-    deg = floor(c1.y + 0.5);
+    if(c1.y >= 0)
+      deg = floor(c1.y);
+    else
+      deg = -floor(-1*c1.y);
     min = c1.y - deg;
     longitude1 = Pi * (deg + 5.0 * min / 3.0) / 180.0;
 
-    deg = floor(c2.x + 0.5);
+    if(c2.x >= 0)
+      deg = floor(c2.x);
+    else
+      deg = -floor(-1*c2.x);
     min = c2.x - deg;
     latitude2 = Pi * (deg + 5.0 * min / 3.0) / 180.0;
-    deg = floor(c2.y + 0.5);
+
+    if(c2.y >= 0)
+      deg = floor(c2.y);
+    else
+      deg = -floor(-1*c2.y);
     min = c2.y - deg;
     longitude2 = Pi * (deg + 5.0 * min / 3.0) / 180.0;
     q1 = cos( longitude1 - longitude2 );
     q2 = cos( latitude1 - latitude2);
     q3 = cos( latitude1 + latitude2);
-    dxy = floor( RRR * acos( 0.5*((1.0 + q1)*q2 - (1.0 - q1)*q3)) + 1.0 + 0.5);
+    dxy = floor( RRR * acos( 0.5*((1.0 + q1)*q2 - (1.0 - q1)*q3)) + 1.0);
     return(dxy);
 	/*int dx = pow((float)(c1.x - c2.x),2);
 	int dy = pow((float)(c1.y - c2.y),2);

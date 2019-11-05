@@ -23,11 +23,11 @@ function (x, method = "euclidean", diag = FALSE, upper = FALSE,
     else list(Size = N, Labels = dimnames(x)[[1L]], Diag = diag, 
         Upper = upper, method = METHODS[method], call = match.call(), 
         class = "dist")
-    y = .Call(C_Cdist, x, method, attrs, p)
+    y <- .Call(C_Cdist, x, method, attrs, p)
     k <- 0
     z <- rep(0, k)
-    Pi = 3.141592
-    RRR = 6378.388
+    PI <- 3.141592
+    RRR <- 6378.388
     for (j in 1:(N - 1)) {
         for (i in (j + 1):N) {
             k <- k + 1
@@ -35,18 +35,30 @@ function (x, method = "euclidean", diag = FALSE, upper = FALSE,
             c1.y <- x[i, 2]
             c2.x <- x[j, 1]
             c2.y <- x[j, 2]
-            deg = floor(c1.x + 0.5)
-            min = c1.x - deg
-            latitude1 = Pi * (deg + 5 * min/3)/180
-            deg = floor(c1.y + 0.5)
-            min = c1.y - deg
-            longitude1 = Pi * (deg + 5 * min/3)/180
-            deg = floor(c2.x + 0.5)
-            min = c2.x - deg
-            latitude2 = Pi * (deg + 5 * min/3)/180
-            deg = floor(c2.y + 0.5)
-            min = c2.y - deg
-            longitude2 = Pi * (deg + 5 * min/3)/180
+            if(c1.x >= 0)
+		    	deg <- floor(c1.x)
+		 	else
+		    	deg <- -floor(-1*c1.x)
+            min <- c1.x - deg
+            latitude1 <- PI * (deg + 5 * min/3)/180
+            if(c1.y >= 0)
+		    	deg <- floor(c1.y)
+		 	else
+		    	deg <- -floor(-1*c1.y)
+            min <- c1.y - deg
+            longitude1 <- PI * (deg + 5 * min/3)/180
+            if(c2.x >= 0)
+		    	deg <- floor(c2.x)
+		 	else
+		    	deg <- -floor(-1*c2.x)
+            min <- c2.x - deg
+            latitude2 <- PI * (deg + 5 * min/3)/180
+            if(c2.y >= 0)
+		    	deg <- floor(c2.y)
+		 	else
+		    	deg <- -floor(-1*c2.y)
+            min <- c2.y - deg
+            longitude2 = PI * (deg + 5 * min/3)/180
             q1 = cos(longitude1 - longitude2)
             q2 = cos(latitude1 - latitude2)
             q3 = cos(latitude1 + latitude2)

@@ -6,14 +6,12 @@ num_extract <- function(string){
   return(s)	
 }	
 
-# Extracts the distance function of R
 dist_extract <- function(string){
   s <- str_match(string, "\\S+$")
   return(s)
 }
 
-
-name_instance <- "berlin52.tsp"
+name_instance <- "ulysses22.tsp"
 name_instance_path <- paste0("../TSPLIB/TSPLIB_original/", name_instance)
 instance_vector <- readLines(name_instance_path)[4:5]
 n <- num_extract(instance_vector[1])
@@ -29,7 +27,6 @@ if(edge_type == "EUC_2D"){
 }
 
 cities_pos <- as.matrix(cities_pos_df)
-
 etsp <- ETSP(cities_pos_df)
 tour <- solve_TSP(etsp)
 plot(etsp, tour, tour_col = "red")

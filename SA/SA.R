@@ -52,6 +52,24 @@ dist_extract <- function(string){
   return(s)
 }
 
+# Rounds to nearest integer
+nint <- function(value){
+  if(value >= 0)
+    y <- floor(value)
+  else
+    y <- -floor(-1*value)
+  return(y)
+}
+
+lat_long <- function(value){
+  PI <- 3.141592
+  deg <- nint(value)
+  min <- value - deg
+  y <- PI*(deg + 5.0 * min / 3.0) / 180.0 
+  return(y)
+}
+
+
 # Function for calculating the euclidean distance where the inputs are vectors.
 dist_euclidean <- function(i, j){
   result <- (i-j)^2 %>% sum() %>% sqrt() %>% round()
@@ -76,25 +94,19 @@ matrix_cost <- function(matrix_pos, n, distance_type){
     PI <- 3.141592
     RRR <- 6378.388
     for(i in 1:(n-1)){
-      i_vec <- matrix_pos[i,]
-      deg <- round(i_vec[1])
-      min <- i_vec[1] - deg
-      i_latitude <- PI * (deg + 5.0 * min / 3.0) / 180.0
-      deg <- round(i_vec[2])
-      min <- i_vec[2] - deg
-      i_longitude <- PI * (deg + 5.0 * min / 3.0) / 180.0 
+      xi <- matrix_pos[i,1]
+      latitude_i <- lat_long(xi)
+      yi <- matrix_pos[i,2]
+      longitude_i <- lat_long(yi)
       for(j in (i+1):n){
-        j_vec <- matrix_pos[j,]
-        deg <- round(j_vec[1])
-        min <- j_vec[1] - deg
-        j_latitude <- PI * (deg + 5.0 * min / 3.0) / 180.0
-        deg <- round(j_vec[2])
-        min <- j_vec[2] - deg
-        j_longitude <- PI * (deg + 5.0 * min / 3.0) / 180.0 
-        q1 <- cos( i_longitude - j_longitude )
-        q2 <- cos( i_latitude - j_latitude)
-        q3 <- cos( i_latitude + j_latitude)
-        dij <- round( RRR * acos( 0.5*((1.0+q1)*q2 - (1.0 - q1)*q3)) + 1.0)
+        xj <- matrix_pos[j,1]
+        latitude_j <- lat_long(xj)
+        yj <- matrix_pos[j,2]
+        longitude_j <- lat_long(yj)
+        q1 <- cos( longitude_i - longitude_j )
+        q2 <- cos( latitude_i - latitude_j )
+        q3 <- cos( latitude_i + latitude_j )
+        dij <-  floor( RRR * acos( 0.5*((1.0+q1)*q2 - (1.0 - q1)*q3)) + 1.0)
         matrix_dist[i,j] <- dij
         matrix_dist[j,i] <- dij
       }
@@ -369,7 +381,6 @@ TSP_function <- function(immediate_value = 2, proportion_edges = 0.2,  position_
     path_min_noswap <- paths[cycle_index,]
     cost_min_noswap <- costs[cycle_index,]
     total_cost_min_noswap <- sum(cost_min_noswap)
-    print(path_min_noswap)
     print(total_cost_min_noswap)
   }
   else{
@@ -559,7 +570,7 @@ TSP_function <- function(immediate_value = 2, proportion_edges = 0.2,  position_
 ############### MAIN ####################################################################
 
 set.seed(130912)
-name_instance <- "berlin52.tsp"
+name_instance <- "gr202.tsp"
 name_instance_path <- paste0("../TSPLIB/TSPLIB_original/", name_instance)
 instance_vector <- readLines(name_instance_path)[4:5]
 n <- num_extract(instance_vector[1])
@@ -583,7 +594,7 @@ time.taken <- end.time - start.time
 time.taken
 
 assign(name_tour, output_tour)
-for(j in 2:15){
+for(j in 2:10){
   output_tour <- TSP_function(immediate_value = ceiling(4*runif(1)), proportion_edges = runif(1,1/20,0.7), initial_solution = output_tour[[1]], distance_type = edge_type)
   name_tour <- paste0("tour", j)
   assign(name_tour, output_tour)
