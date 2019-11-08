@@ -16,10 +16,10 @@ It is the script that runs the instances of TSPLIB using the two-opt method from
 In case we want to input an instance with Geometrical distances, a function of the base package of R needs to be modified. This file contains the instructions on how the function dist of R must be rewritten.  Copy and paste what is in this text file when editing the function with the command *trace(dist, edit = TRUE)*. After running the instances, it is recommendable to change back to the original function of dist.
 
 ## Christofides/
-A C++ Christofides implementation. Is the repository downloaded from [this repository]https://github.com/sth144/christofides-algorithm-cpp. The file *run_instance.sh* was added to run from the terminal the instances for TSLIB. Again, in case the instances with geometrical distances are tried out, the file tsp.cc needs to be modified. The instructions for this modification are written in the file *run_instance.sh*.
+A C++ Christofides implementation. Is the repository downloaded from [this repository](https://github.com/sth144/christofides-algorithm-cpp). The file *run_instance.sh* was added to run from the terminal the instances for TSLIB. Again, in case the instances with geometrical distances are tried out, the file tsp.cc needs to be modified. The instructions for this modification are written in the file *run_instance.sh*.
 
 ## GA/
-It contains files to run a genetic algorithm in MATLAB for the TSP.
+It contains files to run a genetic algorithm in MATLAB for the TSP downloaded from [here](https://la.mathworks.com/matlabcentral/fileexchange/19049-multiple-traveling-salesmen-problem-genetic-algorithm).
 ### GEO_CSVS/
 Is the folder that contains CSVs that must be inputted to the *run_TSPs.m* file, for those instances that have geometrical distance. These CSVs were generated the cost_matrix function, in the folder SA, in the *required_functions.R* file.
 ### mtspf_ga.m
