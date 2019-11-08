@@ -381,7 +381,6 @@ TSP_function <- function(immediate_value = 2, proportion_edges = 0.2,  position_
     path_min_noswap <- paths[cycle_index,]
     cost_min_noswap <- costs[cycle_index,]
     total_cost_min_noswap <- sum(cost_min_noswap)
-    print(total_cost_min_noswap)
   }
   else{
     path_min_noswap <- initial_solution
@@ -452,7 +451,7 @@ TSP_function <- function(immediate_value = 2, proportion_edges = 0.2,  position_
           path1_len <- length(path1) # se toma su longitud
           path2 <- paths_ext[k, index_end:(index_begin+n)] # se considera el camino complemento del primero
           path2_len <- length(path2) # se toma su longitud
-          if(path_len==path1_len && length(setdiff(path, path1))==0){ # si tienen longitudes iguales y tienen las mismas ciudades
+          if(path_len==path1_len && length(setdiff(path, path1))==0 && path1_len != n/2+1){ # si tienen longitudes iguales y tienen las mismas ciudades
             path1_cost <- sum(costs_ext[k, index_begin:(index_end-1)]) # considera el costo
             if(path1_cost < path_cost){ # entonces si es mas barato es posible hacer un swap
               if(length(path_list)>0){ # evitamos ser redundantes en los caminos reemplazados
@@ -469,7 +468,7 @@ TSP_function <- function(immediate_value = 2, proportion_edges = 0.2,  position_
               }
             }
           }
-          if(path_len==path2_len && length(setdiff(path, path2))==0){ # se hace lo análogo con el camino complemento
+          if(path_len==path2_len && length(setdiff(path, path2))==0 && path2_len != n/2+1){ # se hace lo análogo con el camino complemento
             path2_cost <- sum(costs_ext[k,index_end:(index_begin+n-1)])
             if(path2_cost < path_cost){
               if(length(path_list)>0){
@@ -570,7 +569,7 @@ TSP_function <- function(immediate_value = 2, proportion_edges = 0.2,  position_
 ############### MAIN ####################################################################
 
 set.seed(130912)
-name_instance <- "gr202.tsp"
+name_instance <- "kroA100.tsp"
 name_instance_path <- paste0("../TSPLIB/TSPLIB_original/", name_instance)
 instance_vector <- readLines(name_instance_path)[4:5]
 n <- num_extract(instance_vector[1])
