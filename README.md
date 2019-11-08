@@ -11,7 +11,7 @@ This repository is for solving the symmetrical TSP. It accepts the Euclidean dis
 ## 2Opt/
 It stands for two-opt replacement. The script for running the two-opt method is contained in this folder.  It uses the "TSP" library for R. This library is much more extensive than only two-opt replacement, but yet this was the only one we used for contrasting the SA. Here two files are contained:
 
-###TSP_package.R
+### TSP_package.R
 It is the script that runs the instances of TSPLIB using the two-opt method from the library TSP. 
 
 ### modified_dist.txt
