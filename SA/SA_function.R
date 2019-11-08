@@ -253,7 +253,25 @@ SA_function <- function(immediate_value = 2, proportion_edges = 0.2,  position_i
         costs_replace <- costs_ext[index_replace, index_begin:(index_end-1)]
         index_head <- index_min_swap[path_replace[1]] # los indices head y tail del ciclo inicial
         index_tail <- index_min_swap[tail(path_replace, 1)] # que va a reemplazarse
-        if(length(index_head:index_tail) == length(path_replace)){
+        length_half_boolean <- length(path_replace) == n/2+1
+        if(length_half_boolean){
+          if(index_head < index_tail)
+            next_node <- path_min_swap[index_head + 1]
+          else
+            next_node <- path_min_swap[index_tail + 1]
+          if(next_node %in% path_replace)
+            no_cut_boolean <- TRUE
+          else
+            no_cut_boolean <- FALSE
+        }
+        else{
+          lengths_equal_boolean <- length(index_head:index_tail) == length(path_replace)
+          if(lengths_equal_boolean)
+            no_cut_boolean <- TRUE
+          else
+            no_cut_boolean <- FALSE
+        }
+        if( no_cut_boolean ){
           # En este caso se puede sustituir la estructura en el camino sin necesidad de cortarlo
           # Puede ser que haya que ponerlo tal y como esta o en reversa
           if(index_head > index_tail){
@@ -287,7 +305,6 @@ SA_function <- function(immediate_value = 2, proportion_edges = 0.2,  position_i
         index_min_swap <- sapply(1:n, function(j) {which(path_min_swap==j)[1]})
         path_min_swap_ext <-  c(path_min_swap, path_min_swap[2:n])
         cost_min_swap_ext <-  c(cost_min_swap, cost_min_swap[1:(n-1)])
-        print(sum(cost_min_swap))
       }
     }
   }

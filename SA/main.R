@@ -22,7 +22,7 @@ if(edge_type == "EUC_2D"){
 
 cities_pos <- as.matrix(cities_pos_df)
 start.time <- Sys.time()
-output_tour <- TSP_function(position_index = 1, immediate_value = 3, proportion_edges = 0.05, distance_type = edge_type)
+output_tour <- SA_function(position_index = 1, immediate_value = 3, proportion_edges = 0.05, distance_type = edge_type)
 name_tour <- paste0("tour", 1)
 end.time <- Sys.time()
 time.taken <- end.time - start.time
@@ -30,7 +30,7 @@ time.taken
 
 assign(name_tour, output_tour)
 for(j in 2:10){
-  output_tour <- TSP_function(immediate_value = ceiling(4*runif(1)), proportion_edges = runif(1,1/20,0.7), initial_solution = output_tour[[1]], distance_type = edge_type)
+  output_tour <- SA_function(immediate_value = ceiling(4*runif(1)), proportion_edges = runif(1,1/20,0.7), initial_solution = output_tour[[1]], distance_type = edge_type)
   name_tour <- paste0("tour", j)
   assign(name_tour, output_tour)
 }
