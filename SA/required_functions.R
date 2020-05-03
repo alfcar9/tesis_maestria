@@ -8,7 +8,7 @@
 TSP_plot <- function(cities_pos_df, path_heuristic, path_heuristic_original){
   n <- nrow(cities_pos_df)
   g <- ggplot(cities_pos_df, aes(x = V1, y = V2)) +
-   geom_point() + theme_bw() + geom_text(aes(label=c(1:n)), hjust=0, vjust=0)
+   geom_point() + theme_bw()  #+ geom_text(aes(label=c(1:n)), hjust=0, vjust=0)
   # Allows plotting if the whole cicle is given or if the cicle is not finished. The second case is mainly for debugging purposes. 
   if(all(!path_heuristic==0)){
     m <- n

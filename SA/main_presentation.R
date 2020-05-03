@@ -3,9 +3,9 @@
 set.seed(130912)
 source("libraries.R")
 source("required_functions.R")
-source("SA_function.R")
+source("SA_function_presentation.R")
 
-name_instance <- "berlin52.tsp"
+name_instance <- "tsp225.tsp"
 name_instance_path <- paste0("../TSPLIB/TSPLIB_original/", name_instance)
 instance_vector <- readLines(name_instance_path)[4:5]
 n <- num_extract(instance_vector[1])
@@ -28,6 +28,8 @@ end.time <- Sys.time()
 time.taken <- end.time - start.time
 time.taken
 
+g0 <- ggplot(cities_pos_df, aes(x = V1, y = V2)) + geom_point() + theme_bw() + geom_text(aes(label=c(1:n)), hjust=0, vjust=0) + xlab("") + ylab("")
+
 assign(name_tour, output_tour)
 for(j in 2:15){
   output_tour <- SA_function(immediate_value = ceiling(4*runif(1)), proportion_edges = runif(1,1/20,0.7), initial_solution = output_tour[[1]], distance_type = edge_type)
@@ -35,8 +37,40 @@ for(j in 2:15){
   assign(name_tour, output_tour)
 }
 
-tour_plot1 <- tour1
-tour_plot2 <- tour2
+tour1 <- tour1[[3]]
+paths_print <- tour1
 
-g1 <- TSP_plot(cities_pos_df, tour_plot2[[1]], tour_plot1[[1]]) + ggtitle("Iter 1") + labs (x = round(tour_plot2[[2]], 2), y = "")
-g1
+for(j in 2:15){
+  name_tour <- paste0("tour", j)
+  assign(name_tour, get(name_tour)[[3]])
+}
+
+for(j in 2:15){
+  name_tour <- paste0("tour", j)
+  paths_print <- rbind(paths_print, get(name_tour))
+}
+
+
+# tour_plot1 <- tour1
+# #tour_plot2 <- tour15
+
+p <- TSP_plot(cities_pos_df, paths_print[1,], paths_print[1,]) + theme(axis.text.y = element_blank(), axis.text.x = element_blank()) + xlab("") + ylab("")
+png(paste0("/home/toto/plot_01.png"), width=600, height=500, res=120)
+print(p)
+dev.off()
+
+for (i in 2:nrow(paths_print)) {
+  p <- TSP_plot(cities_pos_df, paths_print[i,], paths_print[i-1,]) + theme(axis.text.y = element_blank(), axis.text.x = element_blank()) + xlab("") + ylab("")
+  if(i < 10)
+    png(paste0("/home/toto/plot_0", i, ".png"), width=600, height=500, res=120)
+  else
+    png(paste0("/home/toto/plot_", i, ".png"), width=600, height=500, res=120)
+  print(p)
+  dev.off()
+}
+
+
+# make.mov <- function(){
+#   unlink("plot.mpg")
+#   system("convert -delay 0.5 /home/toto/plot*.png /home/toto/plot.mpg")
+# }
